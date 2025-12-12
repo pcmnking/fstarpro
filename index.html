@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>紫微斗數排盤</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+    <h1>紫微斗數排盤系統</h1>
+    <form id="chartForm">
+        <select id="birth_stem">
+            <!-- Will be populated by JS -->
+        </select>
+
+        <select id="yin_stem">
+            <!-- Will be populated by JS -->
+        </select>
+
+        <select id="ming_position">
+            <!-- Will be populated by JS -->
+        </select>
+
+        <select id="ziwei_position">
+            <!-- Will be populated by JS -->
+        </select>
+
+        <select id="wenqu_position">
+            <!-- Will be populated by JS -->
+        </select>
+        <select id="wenchang_position">
+            <!-- Will be populated by JS -->
+        </select>
+        <select id="zuofu_position">
+            <!-- Will be populated by JS -->
+        </select>
+        <select id="youbi_position">
+            <!-- Will be populated by JS -->
+        </select>
+
+        <div class="control-group" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
+            <label>大運命宮：</label>
+            <select id="dayun_position">
+                <option value="">(請選擇)</option>
+                <!-- populated by js -->
+            </select>
+
+            <label>流年命宮：</label>
+            <select id="liunian_position">
+                <option value="">(請選擇)</option>
+                <!-- populated by js -->
+            </select>
+        </div>
+
+        <!-- Button is not strictly needed for reactivity but good for UX -->
+        <button type="button" id="resetBtn">重置</button>
+        <button type="button" id="copyLinkBtn" style="margin-left: 10px;">📋 複製連結</button>
+        <span id="copyStatus" style="margin-left: 10px; color: green; display: none;">✓ 已複製</span>
+        <button type="button" id="exportTextBtn" style="margin-left: 10px;">📄 下載文字檔</button>
+        <span id="exportStatus" style="margin-left: 10px; color: blue; display: none;">⏳ 生成中...</span>
+        <button type="button" id="exportPdfBtn" style="margin-left: 10px;">🖨️ 下載 PDF</button>
+        <span id="pdfStatus" style="margin-left: 10px; color: blue; display: none;">⏳ 生成中...</span>
+    </form>
+
+    <div class="main-content-wrapper">
+        <div class="chart-container" id="chartContainer">
+            <!-- Grid will be rendered here -->
+        </div>
+        <div class="right-panel">
+            <div id="interaction-analysis" class="analysis-panel">
+                <h3>宮位四化分析</h3>
+                <p style="color:#666;">點擊盤面天干查看詳情...</p>
+            </div>
+            <div id="four-trans" class="analysis-panel" style="margin-top: 20px;">
+                <!-- Four transformations will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Palace Filter Section -->
+    <div id="palace-filter-section" class="analysis-panel" style="margin-top: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            體用宮位篩選
+            <button type="button" id="selectAllPalaces"
+                style="margin-left: 15px; font-size: 0.85em; padding: 4px 12px; cursor: pointer;">全選</button>
+            <button type="button" id="deselectAllPalaces"
+                style="margin-left: 5px; font-size: 0.85em; padding: 4px 12px; cursor: pointer;">全不選</button>
+        </h3>
+        <div id="palace-checkboxes"
+            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 0;">
+            <!-- Checkboxes will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div id="all-12-trans" class="analysis-panel" style="margin-top: 20px;">
+        <!-- All 12 palaces transformations will be rendered here -->
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="assets/js/ziwei_data_P.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+
+</html>
