@@ -272,10 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
         liunianPos: document.getElementById('liunian_position'),
         palaceCheckboxes: document.getElementById('palace-checkboxes'),
         selectAllBtn: document.getElementById('selectAllPalaces'),
-        deselectAllBtn: document.getElementById('deselectAllPalaces')
+        deselectAllBtn: document.getElementById('deselectAllPalaces'),
+        clearArrowsBtn: document.getElementById('clearArrowsBtn')
     };
 
-    let activeSourceBranch = null; // Track the specific clicked palace branch
+    let activeSourceBranches = new Set(); // Track the specific clicked palace branches
+    let activeTargetStars = new Set(); // Track the clicked stars for incoming transformations
 
     // Track selected palaces for filtering (default: all selected)
     let selectedPalaces = new Set(chart.palaceNames);
@@ -403,6 +405,83 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load from URL
     loadFromURL();
 
+    // Helper to get palace center coordinates
+    function getPalaceCenter(branch) {
+        const palaceDiv = document.querySelector(`.palace[data-branch="${branch}"]`);
+        if (!palaceDiv) return null;
+
+        const chartGrid = document.querySelector('.chart-grid');
+        if (!chartGrid) return null;
+
+        const rect = palaceDiv.getBoundingClientRect();
+        const containerRect = chartGrid.getBoundingClientRect();
+
+        return {
+            x: rect.left + rect.width / 2 - containerRect.left,
+            y: rect.top + rect.height / 2 - containerRect.top
+        };
+    }
+
+    // Helper to draw specific arrow path
+    function drawArrowPath(svg, sourcePos, targetPos, typeClass, offsetIndex) {
+        // Calculate control points for curved arrow
+        const dx = targetPos.x - sourcePos.x;
+        const dy = targetPos.y - sourcePos.y;
+        
+        // Create a curved path
+        const curvature = 0.2;
+        const midX = (sourcePos.x + targetPos.x) / 2;
+        const midY = (sourcePos.y + targetPos.y) / 2;
+
+        // Perpendicular offset for curve
+        const offsetX = -dy * curvature;
+        const offsetY = dx * curvature;
+
+        // Add offset based on transformation index to prevent overlapping
+        const indexOffset = (offsetIndex - 1.5) * 15; // Spread arrows
+        const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
+        const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
+
+        const controlX = midX + finalOffsetX;
+        const controlY = midY + finalOffsetY;
+
+        // Shorten the arrow to not overlap with palace borders
+        const shortenFactor = 0.85;
+        const adjustedTargetX = sourcePos.x + dx * shortenFactor;
+        const adjustedTargetY = sourcePos.y + dy * shortenFactor;
+
+        // Create path
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const pathData = `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`;
+        path.setAttribute('d', pathData);
+        path.setAttribute('class', `arrow-${typeClass}`);
+        path.setAttribute('stroke-dasharray', '5,3');
+        
+        // Set color based on class
+        const colors = {
+           'arrow-lu': '#d32f2f',
+           'arrow-quan': '#388e3c',
+           'arrow-ke': '#1976d2',
+           'arrow-ji': '#7b1fa2'
+       };
+       path.setAttribute('stroke', colors[`arrow-${typeClass}`] || colors[typeClass] || '#000'); // Handle both 'arrow-lu' and 'lu' passed
+       if (!colors[`arrow-${typeClass}`] && colors[typeClass]) { 
+           // If just 'lu' passed, ensure correct class name or logic
+           path.setAttribute('stroke', colors[typeClass]);
+       }
+       
+       // Simplified color lookup:
+       const type = typeClass.replace('arrow-', '');
+       const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+       path.setAttribute('stroke', colorMap[type]);
+
+       path.setAttribute('fill', 'none');
+       path.setAttribute('stroke-width', '2');
+       path.setAttribute('marker-end', `url(#arrowhead-${type})`);
+
+        svg.appendChild(path);
+    }
+
     // Helper function to draw transformation arrows
     function drawTransformationArrows(sourceBranch) {
         const arrowContainer = document.getElementById('arrow-container');
@@ -414,66 +493,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!activeTransStars) return;
 
-        // Create SVG element
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.position = 'absolute';
-        svg.style.top = '0';
-        svg.style.left = '0';
-        svg.style.pointerEvents = 'none';
+        // Create or get SVG element
+        let svg = arrowContainer.querySelector('svg');
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.pointerEvents = 'none';
+            arrowContainer.appendChild(svg);
 
-        // Define arrow markers for each transformation type
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-
-        const colors = {
-            '祿': '#d32f2f',
-            '權': '#388e3c',
-            '科': '#1976d2',
-            '忌': '#7b1fa2'
-        };
-
-        const types = ['祿', '權', '科', '忌'];
-        const typeClasses = ['lu', 'quan', 'ke', 'ji'];
-
-        types.forEach((type, idx) => {
-            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-            marker.setAttribute('id', `arrowhead-${typeClasses[idx]}`);
-            marker.setAttribute('markerWidth', '10');
-            marker.setAttribute('markerHeight', '10');
-            marker.setAttribute('refX', '9');
-            marker.setAttribute('refY', '3');
-            marker.setAttribute('orient', 'auto');
-
-            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            polygon.setAttribute('points', '0 0, 10 3, 0 6');
-            polygon.setAttribute('fill', colors[type]);
-
-            marker.appendChild(polygon);
-            defs.appendChild(marker);
-        });
-
-        svg.appendChild(defs);
-
-        // Get palace positions
-        function getPalaceCenter(branch) {
-            const palaceDiv = document.querySelector(`.palace[data-branch="${branch}"]`);
-            if (!palaceDiv) return null;
-
-            const chartGrid = document.querySelector('.chart-grid');
-            if (!chartGrid) return null;
-
-            const rect = palaceDiv.getBoundingClientRect();
-            const containerRect = chartGrid.getBoundingClientRect();
-
-            return {
-                x: rect.left + rect.width / 2 - containerRect.left,
-                y: rect.top + rect.height / 2 - containerRect.top
+            // Define arrow markers for each transformation type
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const colors = {
+                '祿': '#d32f2f',
+                '權': '#388e3c',
+                '科': '#1976d2',
+                '忌': '#7b1fa2'
             };
+            const types = ['祿', '權', '科', '忌'];
+            const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+
+            types.forEach((type, idx) => {
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', `arrowhead-${typeClasses[idx]}`);
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '10');
+                marker.setAttribute('refX', '9');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                polygon.setAttribute('fill', colors[type]);
+
+                marker.appendChild(polygon);
+                defs.appendChild(marker);
+            });
+            svg.appendChild(defs);
         }
 
         const sourcePos = getPalaceCenter(sourceBranch);
         if (!sourcePos) return;
+
+        const types = ['祿', '權', '科', '忌'];
+        const typeClasses = ['lu', 'quan', 'ke', 'ji'];
 
         // Draw arrows for each transformation
         activeTransStars.forEach((star, idx) => {
@@ -490,44 +556,77 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPos = getPalaceCenter(targetBranch);
             if (!targetPos) return;
 
-            // Calculate control points for curved arrow
-            const dx = targetPos.x - sourcePos.x;
-            const dy = targetPos.y - sourcePos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            // Create a curved path
-            const curvature = 0.2;
-            const midX = (sourcePos.x + targetPos.x) / 2;
-            const midY = (sourcePos.y + targetPos.y) / 2;
-
-            // Perpendicular offset for curve
-            const offsetX = -dy * curvature;
-            const offsetY = dx * curvature;
-
-            // Add offset based on transformation index to prevent overlapping
-            const indexOffset = (idx - 1.5) * 15; // Spread arrows
-            const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
-            const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
-
-            const controlX = midX + finalOffsetX;
-            const controlY = midY + finalOffsetY;
-
-            // Shorten the arrow to not overlap with palace borders
-            const shortenFactor = 0.85;
-            const adjustedTargetX = sourcePos.x + dx * shortenFactor;
-            const adjustedTargetY = sourcePos.y + dy * shortenFactor;
-
-            // Create path
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const pathData = `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`;
-            path.setAttribute('d', pathData);
-            path.setAttribute('class', `arrow-${typeClass}`);
-            path.setAttribute('stroke-dasharray', '5,3');
-
-            svg.appendChild(path);
+            drawArrowPath(svg, sourcePos, targetPos, typeClass, idx);
         });
+    }
 
-        arrowContainer.appendChild(svg);
+    // Helper function to draw incoming transformation arrows
+    function drawIncomingTransformationArrows(targetStarName) {
+        const arrowContainer = document.getElementById('arrow-container');
+        if (!arrowContainer) return;
+
+        // Ensure SVG exists (create if not by calling drawTransformationArrows with dummy or manual check)
+        // Reuse logic by checking if SVG exists, if not create it.
+        let svg = arrowContainer.querySelector('svg');
+        if (!svg) {
+             // Basic SVG setup if not already created
+             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+             svg.setAttribute('width', '100%');
+             svg.setAttribute('height', '100%');
+             svg.style.position = 'absolute';
+             svg.style.top = '0';
+             svg.style.left = '0';
+             svg.style.pointerEvents = 'none';
+             arrowContainer.appendChild(svg);
+             
+             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+             const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+             const types = ['祿', '權', '科', '忌'];
+             const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+             types.forEach((type, idx) => {
+                 const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                 marker.setAttribute('id', `arrowhead-${typeClasses[idx]}`);
+                 marker.setAttribute('markerWidth', '10');
+                 marker.setAttribute('markerHeight', '10');
+                 marker.setAttribute('refX', '9');
+                 marker.setAttribute('refY', '3');
+                 marker.setAttribute('orient', 'auto');
+                 const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                 polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                 polygon.setAttribute('fill', colors[type]);
+                 marker.appendChild(polygon);
+                 defs.appendChild(marker);
+             });
+             svg.appendChild(defs);
+        }
+
+        // Find Target Palace
+        const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(targetStarName));
+        if (!targetPalace) return;
+        const targetBranch = Object.keys(chart.palaces).find(key => chart.palaces[key] === targetPalace);
+        const targetPos = getPalaceCenter(targetBranch);
+        if (!targetPos) return;
+
+        // Iterate all palaces to find sources
+        Object.keys(chart.palaces).forEach(sourceBranch => {
+            const sourcePalace = chart.palaces[sourceBranch];
+            const stem = sourcePalace.celestial;
+            const transStars = chart.fourTransMap[stem];
+
+            if (transStars) {
+                const starIdx = transStars.indexOf(targetStarName);
+                if (starIdx !== -1) {
+                    // This palace transforms to the target star!
+                    const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+                    const typeClass = typeClasses[starIdx]; // 0=Lu, 1=Quan...
+                    
+                    const sourcePos = getPalaceCenter(sourceBranch);
+                    if (sourcePos) {
+                        drawArrowPath(svg, sourcePos, targetPos, typeClass, starIdx);
+                    }
+                }
+            }
+        });
     }
 
     // Helper function to find matching palace names between transformations and palace titles
@@ -646,7 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Active Highlight Trans (Based on Stem)
-            if (activeSourceBranch) {
+            activeSourceBranches.forEach(activeSourceBranch => {
                 const activeStem = chart.palaces[activeSourceBranch].celestial;
 
                 const activeTransStars = chart.fourTransMap[activeStem];
@@ -668,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }
-            }
+            });
 
             // Da Yun & Liu Nian Titles with highlighting
             let extraRawHtml = '';
@@ -741,9 +840,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.chartContainer.innerHTML = html;
 
         // Draw arrows if a palace is selected
-        if (activeSourceBranch) {
-            drawTransformationArrows(activeSourceBranch);
-        }
+        activeSourceBranches.forEach(branch => {
+            drawTransformationArrows(branch);
+        });
+
+        // Draw incoming arrows if a star is selected
+        activeTargetStars.forEach(star => {
+            drawIncomingTransformationArrows(star);
+        });
 
         // Render Trans Summary (Born Year Si-Hua)
         let transData = chart.getTransSummary();
@@ -789,72 +893,141 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // Render Interaction Analysis Panel
-        if (activeSourceBranch) {
-            const sourcePalace = chart.palaces[activeSourceBranch];
-            const activeStem = sourcePalace.celestial;
-
-            let analysisHtml = `<h3>【${sourcePalace.title}】四化飛伏分析</h3>`;
-            analysisHtml += `<p style="font-size:0.9em; margin-bottom:10px;">宮干：${activeStem} | 宮位：${sourcePalace.name}</p>`;
-
-            if (sourcePalace) {
-                const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
-                const activeTransStars = chart.fourTransMap[activeStem];
-
-                if (activeTransStars) {
-                    activeTransStars.forEach((star, idx) => {
-                        const type = chart.transTypes[idx];
-                        const color = transColors[type] || '#333';
-
-                        // Find Target Palace
-                        const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
-                        const targetName = targetPalace ? targetPalace.title : '未知';
-                        const sourceName = sourcePalace.title;
-                        const isZiHua = sourceName === targetName;
-
-                        // Get Interpretation Text from JSON
-                        let interpretation = '';
-                        let displayTitle = '';
-                        let containerClass = 'analysis-item';
-
-                        if (isZiHua) {
-                            // Self-Transformation Logic
-                            containerClass += ' zihua-highlight';
-                            displayTitle = `<span class="zihua-tag">[自化]</span> <strong>${sourceName}</strong> <strong>自化${type}</strong>`;
-
-                            // Load from ZIWEI_DATA_ZIHUA if available
-                            if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
-                                // Try exact match first
-                                interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName];
-                                // Fallback if key + "宮" logic needed (though ZIWEI_DATA_ZIHUA seems to use exact keys based on user diff)
-                                if (!interpretation) interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'];
+        let hasSelection = activeSourceBranches.size > 0 || activeTargetStars.size > 0;
+        
+        if (hasSelection) {
+            let analysisHtml = `<h3>飛化分析</h3>`;
+            
+            // 1. Source Branches (Outgoing)
+            if (activeSourceBranches.size > 0) {
+                activeSourceBranches.forEach(activeSourceBranch => {
+                    const sourcePalace = chart.palaces[activeSourceBranch];
+                    const activeStem = sourcePalace.celestial;
+                    
+                    analysisHtml += `<div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">`;
+                    analysisHtml += `<h4>【${sourcePalace.title}】四化飛伏</h4>`;
+                    analysisHtml += `<p style="font-size:0.9em; margin-bottom:10px;">宮干：${activeStem} | 宮位：${sourcePalace.name}</p>`;
+    
+                    const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                    const activeTransStars = chart.fourTransMap[activeStem];
+    
+                    if (activeTransStars) {
+                        activeTransStars.forEach((star, idx) => {
+                            const type = chart.transTypes[idx];
+                            const color = transColors[type] || '#333';
+    
+                            // Find Target Palace
+                            const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
+                            const targetName = targetPalace ? targetPalace.title : '未知';
+                            const sourceName = sourcePalace.title;
+                            const isZiHua = sourceName === targetName;
+    
+                            // Get Interpretation Text from JSON
+                            let interpretation = '';
+                            let displayTitle = '';
+                            let containerClass = 'analysis-item';
+    
+                            if (isZiHua) {
+                                // Self-Transformation Logic
+                                containerClass += ' zihua-highlight';
+                                displayTitle = `<span class="zihua-tag">[自化]</span> <strong>${sourceName}</strong> <strong>自化${type}</strong>`;
+    
+                                // Load from ZIWEI_DATA_ZIHUA if available
+                                if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
+                                    // Try exact match first
+                                    interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName];
+                                    // Fallback if key + "宮" logic needed
+                                    if (!interpretation) interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'];
+                                } else {
+                                    interpretation = '(暫無自化象義)';
+                                }
                             } else {
-                                interpretation = '(暫無自化象義)';
+                                // Standard Logic
+                                displayTitle = `<strong>${sourceName}</strong> <strong>${type}入</strong> <strong>${targetName}</strong>`;
+                                interpretation = chart.getInterpretation(sourceName, type, targetName);
                             }
-
-                        } else {
-                            // Standard Logic
-                            displayTitle = `<strong>${sourceName}</strong> <strong>${type}入</strong> <strong>${targetName}</strong>`;
-                            interpretation = chart.getInterpretation(sourceName, type, targetName);
-                        }
-
-                        if (!interpretation) interpretation = '(暫無此象義)';
-
-                        analysisHtml += `
-                            <div class="${containerClass}" style="padding: 8px 12px; margin-bottom: 8px; border-left: 3px solid ${color}; background: #fafafa; border-radius: 4px;">
-                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
-                                    <span style="color:${color}; font-weight:bold; font-size:1.1em;">[${type}]</span>
-                                    <span style="font-weight:bold;">${star}</span>
-                                    <span style="font-size:0.9em; color:#666;">➜ ${displayTitle}</span>
+    
+                            if (!interpretation) interpretation = '(暫無此象義)';
+    
+                            analysisHtml += `
+                                <div class="${containerClass}" style="padding: 8px 12px; margin-bottom: 8px; border-left: 3px solid ${color}; background: #fafafa; border-radius: 4px;">
+                                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                                        <span style="color:${color}; font-weight:bold; font-size:1.1em;">[${type}]</span>
+                                        <span style="font-weight:bold;">${star}</span>
+                                        <span style="font-size:0.9em; color:#666;">➜ ${displayTitle}</span>
+                                    </div>
+                                    <div style="font-size:0.85em; color:#666; line-height:1.4; white-space: pre-wrap;">${interpretation}</div>
                                 </div>
-                                <div style="font-size:0.85em; color:#666; line-height:1.4; white-space: pre-wrap;">${interpretation}</div>
-                            </div>
-                        `;
-                    });
-                }
+                            `;
+                        });
+                    }
+                    analysisHtml += `</div>`;
+                });
             }
+
+            // 2. Target Stars (Incoming)
+            if (activeTargetStars.size > 0) {
+                activeTargetStars.forEach(targetStarName => {
+                    analysisHtml += `<div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">`;
+                    analysisHtml += `<h4 style="color:#333;">【${targetStarName}】互涉飛化</h4>`;
+                    
+                    const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(targetStarName));
+                    if (targetPalace) {
+                        const targetTitle = targetPalace.title;
+
+                        Object.keys(chart.palaces).forEach(sourceBranch => {
+                            const sourcePalace = chart.palaces[sourceBranch];
+                            const stem = sourcePalace.celestial;
+                            const transStars = chart.fourTransMap[stem];
+
+                            if (transStars) {
+                                const starIdx = transStars.indexOf(targetStarName);
+                                if (starIdx !== -1) {
+                                    const type = chart.transTypes[starIdx];
+                                    const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                                    const color = transColors[type] || '#333';
+                                    
+                                    const sourceName = sourcePalace.title;
+                                    const isZiHua = sourceName === targetTitle;
+                                    
+                                    let interpretation = '';
+                                    let displayTitle = '';
+                                    
+                                    if (isZiHua) {
+                                        displayTitle = `<span class="zihua-tag">[自化]</span> <strong>${sourceName}</strong> <strong>自化${type}</strong>`;
+                                        if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
+                                            interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'];
+                                        } else {
+                                            interpretation = '(暫無自化象義)';
+                                        }
+                                    } else {
+                                        displayTitle = `<strong>${sourceName}</strong> <strong>${type}入</strong> <strong>${targetTitle}</strong>`;
+                                        interpretation = chart.getInterpretation(sourceName, type, targetTitle);
+                                    }
+                                    
+                                    if (!interpretation) interpretation = '(暫無此象義)';
+                                    
+                                    analysisHtml += `
+                                        <div class="analysis-item" style="padding: 8px 12px; margin-bottom: 8px; border-left: 3px solid ${color}; background: #fafafa; border-radius: 4px;">
+                                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                                                <span style="color:${color}; font-weight:bold; font-size:1.1em;">[${type}]</span>
+                                                <span style="font-weight:bold;">${targetStarName}</span>
+                                                <span style="font-size:0.9em; color:#666;">← ${displayTitle}</span>
+                                            </div>
+                                            <div style="font-size:0.85em; color:#666; line-height:1.4; white-space: pre-wrap;">${interpretation}</div>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        });
+                    }
+                    analysisHtml += `</div>`;
+                });
+            }
+
             ui.analysisContainer.innerHTML = analysisHtml;
         } else {
-            ui.analysisContainer.innerHTML = `<h3>宮位四化分析</h3><p style="color:#666;">點擊盤面天干查看詳情...</p>`;
+            ui.analysisContainer.innerHTML = `<h3>飛化分析</h3><p style="color:#666;">點擊盤面天干或星曜查看詳情...</p>`;
         }
 
 
@@ -997,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.wenchangPos.value = '戌';
         ui.zuofuPos.value = '辰';
         ui.youbiPos.value = '戌';
-        activeSourceBranch = null; // Reset selection
+        activeSourceBranches.clear(); // Reset selection
         render();
     });
 
@@ -1032,7 +1205,135 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Export Text File Button
+    // Export Text File Logic
+    function generateExportText() {
+        let textContent = '紫微斗數排盤解讀\n';
+        textContent += '='.repeat(50) + '\n\n';
+
+        // Parameters
+        textContent += '命盤參數：\n';
+        textContent += '  出生年天干：' + ui.birthStem.value + '\n';
+        textContent += '  寅宮天干：' + ui.yinStem.value + '\n';
+        textContent += '  命宮位置：' + ui.mingPos.value + '\n';
+        textContent += '  紫微位置：' + ui.ziweiPos.value + '\n';
+        textContent += '  文曲位置：' + ui.wenquPos.value + '\n';
+        textContent += '  文昌位置：' + ui.wenchangPos.value + '\n';
+        textContent += '  左輔位置：' + ui.zuofuPos.value + '\n';
+        textContent += '  右弼位置：' + ui.youbiPos.value + '\n';
+        if (ui.dayunPos.value) textContent += '  大運命宮：' + ui.dayunPos.value + '\n';
+        if (ui.liunianPos.value) textContent += '  流年命宮：' + ui.liunianPos.value + '\n';
+        textContent += '\n' + '='.repeat(50) + '\n\n';
+
+        // Birth Year Four Transformations
+        textContent += '出生年四化解讀（' + ui.birthStem.value + '）\n';
+        textContent += '-'.repeat(50) + '\n\n';
+        const transData = chart.getTransSummary();
+        let birthTransData = {};
+        if (typeof ZIWEI_DATA_SIHUA_N !== 'undefined') birthTransData = ZIWEI_DATA_SIHUA_N;
+        transData.forEach(item => {
+            let palaceTitle = '未知';
+            Object.values(chart.palaces).forEach(p => {
+                if (p.stars.includes(item.star)) palaceTitle = p.title;
+            });
+            let interpretation = '(暫無資料)';
+            if (birthTransData[palaceTitle] && birthTransData[palaceTitle][item.type]) {
+                interpretation = birthTransData[palaceTitle][item.type];
+            }
+            textContent += '[' + item.type + '] ' + item.star + ' → ' + palaceTitle + '\n';
+            textContent += interpretation + '\n\n';
+        });
+        textContent += '='.repeat(50) + '\n\n';
+
+        // Interaction Analysis (if palace clicked)
+        if (activeSourceBranch) {
+            const sourcePalace = chart.palaces[activeSourceBranch];
+            const activeStem = sourcePalace.celestial;
+            textContent += '【' + sourcePalace.title + '】四化飛伏分析\n';
+            textContent += '宮干：' + activeStem + ' | 宮位：' + sourcePalace.name + '\n';
+            textContent += '-'.repeat(50) + '\n\n';
+            const activeTransStars = chart.fourTransMap[activeStem];
+            if (activeTransStars) {
+                activeTransStars.forEach((star, idx) => {
+                    const type = chart.transTypes[idx];
+                    const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
+                    const targetName = targetPalace ? targetPalace.title : '未知';
+                    const sourceName = sourcePalace.title;
+                    const isZiHua = sourceName === targetName;
+                    let interpretation = '';
+                    let displayTitle = '';
+                    if (isZiHua) {
+                        displayTitle = sourceName + ' 自化' + type;
+                        if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
+                            interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'] || '';
+                        }
+                        if (!interpretation) interpretation = '(暫無自化象義)';
+                    } else {
+                        displayTitle = sourceName + ' ' + type + '入 ' + targetName;
+                        interpretation = chart.getInterpretation(sourceName, type, targetName);
+                    }
+                    if (!interpretation) interpretation = '(暫無此象義)';
+                    textContent += '[' + type + '] ' + star + ' → ' + displayTitle + '\n';
+                    textContent += interpretation + '\n\n';
+                });
+            }
+            textContent += '='.repeat(50) + '\n\n';
+        }
+
+        // All Palace Pages
+        function generatePalaceText(layerName, layerMingBranch) {
+            const mingIdx = chart._getIndex(layerMingBranch);
+            let text = layerName + '\n' + '='.repeat(50) + '\n\n';
+            for (let i = 0; i < 12; i++) {
+                let targetIdx = (mingIdx - i) % 12;
+                if (targetIdx < 0) targetIdx += 12;
+                let currentBranch = chart._getBranch(targetIdx);
+                let pObj = chart.palaces[currentBranch];
+                let stem = pObj.celestial;
+                let layerTitle = chart.palaceNames[i];
+                text += layerTitle + '（宮干：' + stem + ' | 位置：' + currentBranch + '）\n';
+                text += '-'.repeat(50) + '\n';
+                let transStars = chart.fourTransMap[stem];
+                if (transStars) {
+                    transStars.forEach((star, idx) => {
+                        const type = chart.transTypes[idx];
+                        const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
+                        let displayTitle = '';
+                        let interpretation = '';
+                        if (targetPalaceObj) {
+                            const targetTitle = targetPalaceObj.title;
+                            const isZiHua = (layerTitle === targetTitle);
+                            if (isZiHua) {
+                                displayTitle = '自化' + type;
+                                if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
+                                    interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
+                                }
+                                if (!interpretation) interpretation = '(暫無自化象義)';
+                            } else {
+                                displayTitle = type + '入 ' + targetTitle;
+                                interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
+                            }
+                        } else {
+                            displayTitle = '未知宮位';
+                        }
+                        if (!interpretation) interpretation = '(暫無此象義)';
+                        text += '\n[' + type + '] ' + star + ' → ' + displayTitle + '\n';
+                        text += interpretation + '\n';
+                    });
+                }
+                text += '\n';
+            }
+            return text;
+        }
+
+        textContent += generatePalaceText('本命各宮飛化', ui.mingPos.value);
+        if (ui.dayunPos.value) textContent += generatePalaceText('大運各宮飛化', ui.dayunPos.value);
+        if (ui.liunianPos.value) textContent += generatePalaceText('流年各宮飛化', ui.liunianPos.value);
+
+        textContent += '\n生成時間：' + new Date().toLocaleString('zh-TW') + '\n';
+        
+        return textContent;
+    }
+
     const exportTextBtn = document.getElementById('exportTextBtn');
     const exportStatus = document.getElementById('exportStatus');
 
@@ -1043,129 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setTimeout(() => {
                 try {
-                    let textContent = '紫微斗數排盤解讀\n';
-                    textContent += '='.repeat(50) + '\n\n';
-
-                    // Parameters
-                    textContent += '命盤參數：\n';
-                    textContent += '  出生年天干：' + ui.birthStem.value + '\n';
-                    textContent += '  寅宮天干：' + ui.yinStem.value + '\n';
-                    textContent += '  命宮位置：' + ui.mingPos.value + '\n';
-                    textContent += '  紫微位置：' + ui.ziweiPos.value + '\n';
-                    textContent += '  文曲位置：' + ui.wenquPos.value + '\n';
-                    textContent += '  文昌位置：' + ui.wenchangPos.value + '\n';
-                    textContent += '  左輔位置：' + ui.zuofuPos.value + '\n';
-                    textContent += '  右弼位置：' + ui.youbiPos.value + '\n';
-                    if (ui.dayunPos.value) textContent += '  大運命宮：' + ui.dayunPos.value + '\n';
-                    if (ui.liunianPos.value) textContent += '  流年命宮：' + ui.liunianPos.value + '\n';
-                    textContent += '\n' + '='.repeat(50) + '\n\n';
-
-                    // Birth Year Four Transformations
-                    textContent += '出生年四化解讀（' + ui.birthStem.value + '）\n';
-                    textContent += '-'.repeat(50) + '\n\n';
-                    const transData = chart.getTransSummary();
-                    let birthTransData = {};
-                    if (typeof ZIWEI_DATA_SIHUA_N !== 'undefined') birthTransData = ZIWEI_DATA_SIHUA_N;
-                    transData.forEach(item => {
-                        let palaceTitle = '未知';
-                        Object.values(chart.palaces).forEach(p => {
-                            if (p.stars.includes(item.star)) palaceTitle = p.title;
-                        });
-                        let interpretation = '(暫無資料)';
-                        if (birthTransData[palaceTitle] && birthTransData[palaceTitle][item.type]) {
-                            interpretation = birthTransData[palaceTitle][item.type];
-                        }
-                        textContent += '[' + item.type + '] ' + item.star + ' → ' + palaceTitle + '\n';
-                        textContent += interpretation + '\n\n';
-                    });
-                    textContent += '='.repeat(50) + '\n\n';
-
-                    // Interaction Analysis (if palace clicked)
-                    if (activeSourceBranch) {
-                        const sourcePalace = chart.palaces[activeSourceBranch];
-                        const activeStem = sourcePalace.celestial;
-                        textContent += '【' + sourcePalace.title + '】四化飛伏分析\n';
-                        textContent += '宮干：' + activeStem + ' | 宮位：' + sourcePalace.name + '\n';
-                        textContent += '-'.repeat(50) + '\n\n';
-                        const activeTransStars = chart.fourTransMap[activeStem];
-                        if (activeTransStars) {
-                            activeTransStars.forEach((star, idx) => {
-                                const type = chart.transTypes[idx];
-                                const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
-                                const targetName = targetPalace ? targetPalace.title : '未知';
-                                const sourceName = sourcePalace.title;
-                                const isZiHua = sourceName === targetName;
-                                let interpretation = '';
-                                let displayTitle = '';
-                                if (isZiHua) {
-                                    displayTitle = sourceName + ' 自化' + type;
-                                    if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
-                                        interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'] || '';
-                                    }
-                                    if (!interpretation) interpretation = '(暫無自化象義)';
-                                } else {
-                                    displayTitle = sourceName + ' ' + type + '入 ' + targetName;
-                                    interpretation = chart.getInterpretation(sourceName, type, targetName);
-                                }
-                                if (!interpretation) interpretation = '(暫無此象義)';
-                                textContent += '[' + type + '] ' + star + ' → ' + displayTitle + '\n';
-                                textContent += interpretation + '\n\n';
-                            });
-                        }
-                        textContent += '='.repeat(50) + '\n\n';
-                    }
-
-                    // All Palace Pages
-                    function generatePalaceText(layerName, layerMingBranch) {
-                        const mingIdx = chart._getIndex(layerMingBranch);
-                        let text = layerName + '\n' + '='.repeat(50) + '\n\n';
-                        for (let i = 0; i < 12; i++) {
-                            let targetIdx = (mingIdx - i) % 12;
-                            if (targetIdx < 0) targetIdx += 12;
-                            let currentBranch = chart._getBranch(targetIdx);
-                            let pObj = chart.palaces[currentBranch];
-                            let stem = pObj.celestial;
-                            let layerTitle = chart.palaceNames[i];
-                            text += layerTitle + '（宮干：' + stem + ' | 位置：' + currentBranch + '）\n';
-                            text += '-'.repeat(50) + '\n';
-                            let transStars = chart.fourTransMap[stem];
-                            if (transStars) {
-                                transStars.forEach((star, idx) => {
-                                    const type = chart.transTypes[idx];
-                                    const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
-                                    let displayTitle = '';
-                                    let interpretation = '';
-                                    if (targetPalaceObj) {
-                                        const targetTitle = targetPalaceObj.title;
-                                        const isZiHua = (layerTitle === targetTitle);
-                                        if (isZiHua) {
-                                            displayTitle = '自化' + type;
-                                            if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
-                                                interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
-                                            }
-                                            if (!interpretation) interpretation = '(暫無自化象義)';
-                                        } else {
-                                            displayTitle = type + '入 ' + targetTitle;
-                                            interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
-                                        }
-                                    } else {
-                                        displayTitle = '未知宮位';
-                                    }
-                                    if (!interpretation) interpretation = '(暫無此象義)';
-                                    text += '\n[' + type + '] ' + star + ' → ' + displayTitle + '\n';
-                                    text += interpretation + '\n';
-                                });
-                            }
-                            text += '\n';
-                        }
-                        return text;
-                    }
-
-                    textContent += generatePalaceText('本命各宮飛化', ui.mingPos.value);
-                    if (ui.dayunPos.value) textContent += generatePalaceText('大運各宮飛化', ui.dayunPos.value);
-                    if (ui.liunianPos.value) textContent += generatePalaceText('流年各宮飛化', ui.liunianPos.value);
-
-                    textContent += '\n生成時間：' + new Date().toLocaleString('zh-TW') + '\n';
+                    const textContent = generateExportText();
 
                     // Download
                     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
@@ -1187,6 +1366,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => { exportStatus.style.display = 'none'; }, 2000);
                 }
             }, 100);
+        });
+    }
+
+    // Copy Text Content Button
+    const copyTextBtn = document.getElementById('copyTextBtn');
+    const copyTextStatus = document.getElementById('copyTextStatus');
+
+    if (copyTextBtn) {
+        copyTextBtn.addEventListener('click', async () => {
+            copyTextStatus.style.display = 'inline';
+            copyTextStatus.textContent = '⏳ 處理中...';
+            copyTextStatus.style.color = 'blue';
+
+            try {
+                const textContent = generateExportText();
+                await navigator.clipboard.writeText(textContent);
+                
+                copyTextStatus.textContent = '✓ 已複製';
+                copyTextStatus.style.color = 'green';
+                setTimeout(() => { copyTextStatus.style.display = 'none'; }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                try {
+                    const textContent = generateExportText();
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textContent;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    copyTextStatus.textContent = '✓ 已複製';
+                    copyTextStatus.style.color = 'green';
+                    setTimeout(() => { copyTextStatus.style.display = 'none'; }, 2000);
+                } catch (fallbackErr) {
+                    copyTextStatus.textContent = '✗ 複製失敗';
+                    copyTextStatus.style.color = 'red';
+                    console.error('Copy text error:', err);
+                    setTimeout(() => { copyTextStatus.style.display = 'none'; }, 2000);
+                }
+            }
         });
     }
 
@@ -1311,37 +1531,89 @@ document.addEventListener('DOMContentLoaded', () => {
                     htmlContent += '</div>';
 
                     // Page 3: Interaction Analysis (if palace clicked)
-                    if (activeSourceBranch) {
-                        const sourcePalace = chart.palaces[activeSourceBranch];
-                        const activeStem = sourcePalace.celestial;
-                        htmlContent += '<div class="page-break"><h2 style="margin-top: 20px;">【' + sourcePalace.title + '】四化飛伏分析</h2>';
-                        htmlContent += '<p style="font-size: 11px; color: #666; margin-bottom: 20px;">宮干：' + activeStem + ' | 宮位：' + sourcePalace.name + '</p>';
-                        const activeTransStars = chart.fourTransMap[activeStem];
-                        if (activeTransStars) {
-                            activeTransStars.forEach((star, idx) => {
-                                const type = chart.transTypes[idx];
-                                const typeClass = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' }[type];
-                                const colorClass = { '祿': 'color-lu', '權': 'color-quan', '科': 'color-ke', '忌': 'color-ji' }[type];
-                                const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
-                                const targetName = targetPalace ? targetPalace.title : '未知';
-                                const sourceName = sourcePalace.title;
-                                const isZiHua = sourceName === targetName;
-                                let interpretation = '';
-                                let displayTitle = '';
-                                if (isZiHua) {
-                                    displayTitle = '<span style="background: #607d8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">[自化]</span> ' + sourceName + ' 自化' + type;
-                                    if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
-                                        interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'] || '';
+                    if (activeSourceBranches.size > 0) {
+                        activeSourceBranches.forEach(activeSourceBranch => {
+                            const sourcePalace = chart.palaces[activeSourceBranch];
+                            const activeStem = sourcePalace.celestial;
+                            htmlContent += '<div class="page-break"><h2 style="margin-top: 20px;">【' + sourcePalace.title + '】四化飛伏分析</h2>';
+                            htmlContent += '<p style="font-size: 11px; color: #666; margin-bottom: 20px;">宮干：' + activeStem + ' | 宮位：' + sourcePalace.name + '</p>';
+                            const activeTransStars = chart.fourTransMap[activeStem];
+                            if (activeTransStars) {
+                                activeTransStars.forEach((star, idx) => {
+                                    const type = chart.transTypes[idx];
+                                    const typeClass = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' }[type];
+                                    const colorClass = { '祿': 'color-lu', '權': 'color-quan', '科': 'color-ke', '忌': 'color-ji' }[type];
+                                    const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
+                                    const targetName = targetPalace ? targetPalace.title : '未知';
+                                    const sourceName = sourcePalace.title;
+                                    const isZiHua = sourceName === targetName;
+                                    let interpretation = '';
+                                    let displayTitle = '';
+                                    if (isZiHua) {
+                                        displayTitle = '<span style="background: #607d8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">[自化]</span> ' + sourceName + ' 自化' + type;
+                                        if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
+                                            interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'] || '';
+                                        }
+                                        if (!interpretation) interpretation = '(暫無自化象義)';
+                                    } else {
+                                        displayTitle = sourceName + ' ' + type + '入 ' + targetName;
+                                        interpretation = chart.getInterpretation(sourceName, type, targetName);
                                     }
-                                    if (!interpretation) interpretation = '(暫無自化象義)';
-                                } else {
-                                    displayTitle = sourceName + ' ' + type + '入 ' + targetName;
-                                    interpretation = chart.getInterpretation(sourceName, type, targetName);
+                                    if (!interpretation) interpretation = '(暫無此象義)';
+                                    htmlContent += '<div class="trans-item ' + typeClass + '"><div class="trans-header"><span class="' + colorClass + '">[' + type + ']</span> <span style="font-weight: bold;">' + star + '</span> <span style="color: #999;"> → </span> <span style="color: #666;">' + displayTitle + '</span></div><div class="trans-content">' + interpretation + '</div></div>';
+                                });
+                            }
+                            htmlContent += '</div>';
+                        });
+                    }
+
+                    // Page 4: Incoming Transformation Analysis (if star clicked)
+                    if (activeTargetStars.size > 0) {
+                        htmlContent += '<div class="page-break"><h2 style="margin-top: 20px;">【' + Array.from(activeTargetStars).join('、') + '】互涉飛化分析</h2>';
+                        activeTargetStars.forEach(targetStarName => {
+                             htmlContent += '<h3 style="margin-top: 15px; border-left: 4px solid #333; padding-left: 10px;">星曜：' + targetStarName + ' (接收飛化)</h3>';
+                             
+                             // Find target palace
+                             const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(targetStarName));
+                             if (!targetPalace) return;
+                             const targetTitle = targetPalace.title;
+
+                             Object.keys(chart.palaces).forEach(sourceBranch => {
+                                const sourcePalace = chart.palaces[sourceBranch];
+                                const stem = sourcePalace.celestial;
+                                const transStars = chart.fourTransMap[stem];
+
+                                if (transStars) {
+                                    const starIdx = transStars.indexOf(targetStarName);
+                                    if (starIdx !== -1) {
+                                        const type = chart.transTypes[starIdx]; // '祿', '權', ...
+                                        const typeClass = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' }[type];
+                                        const colorClass = { '祿': 'color-lu', '權': 'color-quan', '科': 'color-ke', '忌': 'color-ji' }[type];
+                                        
+                                        const sourceName = sourcePalace.title;
+                                        const isZiHua = sourceName === targetTitle;
+                                        
+                                        let interpretation = '';
+                                        let displayTitle = '';
+                                        
+                                        if (isZiHua) {
+                                            displayTitle = '<span style="background: #607d8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">[自化]</span> ' + sourceName + ' 自化' + type;
+                                            if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[sourceName] && ZIWEI_DATA_ZIHUA[sourceName][type]) {
+                                                interpretation = ZIWEI_DATA_ZIHUA[sourceName][type][sourceName] || ZIWEI_DATA_ZIHUA[sourceName][type][sourceName + '宮'] || '';
+                                            }
+                                            if (!interpretation) interpretation = '(暫無自化象義)';
+                                        } else {
+                                            displayTitle = sourceName + ' ' + type + '入 ' + targetTitle;
+                                            interpretation = chart.getInterpretation(sourceName, type, targetTitle);
+                                        }
+                                        
+                                        if (!interpretation) interpretation = '(暫無此象義)';
+                                        
+                                        htmlContent += '<div class="trans-item ' + typeClass + '"><div class="trans-header"><span class="' + colorClass + '">[' + type + ']</span> <span style="font-weight: bold;">' + targetStarName + '</span> <span style="color: #999;"> ← </span> <span style="color: #666;">' + displayTitle + '</span></div><div class="trans-content">' + interpretation + '</div></div>';
+                                    }
                                 }
-                                if (!interpretation) interpretation = '(暫無此象義)';
-                                htmlContent += '<div class="trans-item ' + typeClass + '"><div class="trans-header"><span class="' + colorClass + '">[' + type + ']</span> <span style="font-weight: bold;">' + star + '</span> <span style="color: #999;"> → </span> <span style="color: #666;">' + displayTitle + '</span></div><div class="trans-content">' + interpretation + '</div></div>';
-                            });
-                        }
+                             });
+                        });
                         htmlContent += '</div>';
                     }
 
@@ -1428,10 +1700,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const palaceDiv = e.target.closest('.palace');
             if (palaceDiv) {
                 const branch = palaceDiv.dataset.branch;
-                if (activeSourceBranch === branch) {
-                    activeSourceBranch = null;
+                if (activeSourceBranches.has(branch)) {
+                    activeSourceBranches.delete(branch);
                 } else {
-                    activeSourceBranch = branch;
+                    activeSourceBranches.add(branch);
                 }
                 render();
             }
@@ -1440,6 +1712,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle Star Click (New)
         if (e.target.classList.contains('star')) {
             const starName = e.target.innerText.trim();
+
+            // Toggle arrow visualization
+            if (activeTargetStars.has(starName)) {
+                activeTargetStars.delete(starName);
+            } else {
+                activeTargetStars.add(starName);
+            }
+            render();
+
             let data = null;
 
             // Try to find star data in global ZIWEI_DATA_MAIN_STARS
@@ -1499,6 +1780,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Clear Arrows Button
+    if (ui.clearArrowsBtn) {
+        ui.clearArrowsBtn.addEventListener('click', () => {
+            activeSourceBranches.clear();
+            activeTargetStars.clear();
+            render();
+        });
+    }
 
     // Initialize Palace Filter
     initializePalaceFilter();
