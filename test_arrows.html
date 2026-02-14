@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>箭頭測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .test-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            border: 2px solid #333;
+            margin: 20px auto;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .test-box {
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            cursor: pointer;
+        }
+
+        .test-box:hover {
+            background: #e0e0e0;
+        }
+
+        .arrow-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .arrow-lu {
+            stroke: #d32f2f;
+            fill: none;
+            stroke-width: 2;
+            marker-end: url(#arrowhead-lu);
+        }
+
+        .arrow-quan {
+            stroke: #388e3c;
+            fill: none;
+            stroke-width: 2;
+            marker-end: url(#arrowhead-quan);
+        }
+
+        .arrow-ke {
+            stroke: #1976d2;
+            fill: none;
+            stroke-width: 2;
+            marker-end: url(#arrowhead-ke);
+        }
+
+        .arrow-ji {
+            stroke: #7b1fa2;
+            fill: none;
+            stroke-width: 2;
+            marker-end: url(#arrowhead-ji);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>箭頭繪製測試</h1>
+    <p>點擊任意格子查看箭頭效果</p>
+
+    <div class="test-container">
+        <div class="test-grid" id="testGrid">
+            <div class="test-box" data-id="0">0</div>
+            <div class="test-box" data-id="1">1</div>
+            <div class="test-box" data-id="2">2</div>
+            <div class="test-box" data-id="3">3</div>
+            <div class="test-box" data-id="4">4</div>
+            <div class="test-box" data-id="5">5</div>
+            <div class="test-box" data-id="6">6</div>
+            <div class="test-box" data-id="7">7</div>
+            <div class="test-box" data-id="8">8</div>
+            <div class="test-box" data-id="9">9</div>
+            <div class="test-box" data-id="10">10</div>
+            <div class="test-box" data-id="11">11</div>
+            <div class="test-box" data-id="12">12</div>
+            <div class="test-box" data-id="13">13</div>
+            <div class="test-box" data-id="14">14</div>
+            <div class="test-box" data-id="15">15</div>
+            <div class="arrow-container" id="arrowContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('testGrid');
+        const arrowContainer = document.getElementById('arrowContainer');
+        const boxes = document.querySelectorAll('.test-box');
+
+        boxes.forEach(box => {
+            box.addEventListener('click', () => {
+                const sourceId = parseInt(box.dataset.id);
+                drawTestArrows(sourceId);
+            });
+        });
+
+        function drawTestArrows(sourceId) {
+            // Clear previous arrows
+            arrowContainer.innerHTML = '';
+
+            // Create SVG
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+
+            // Define markers
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const colors = {
+                'lu': '#d32f2f',
+                'quan': '#388e3c',
+                'ke': '#1976d2',
+                'ji': '#7b1fa2'
+            };
+
+            Object.keys(colors).forEach(type => {
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', `arrowhead-${type}`);
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '10');
+                marker.setAttribute('refX', '9');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                polygon.setAttribute('fill', colors[type]);
+
+                marker.appendChild(polygon);
+                defs.appendChild(marker);
+            });
+
+            svg.appendChild(defs);
+
+            // Get box center
+            function getBoxCenter(id) {
+                const box = document.querySelector(`[data-id="${id}"]`);
+                if (!box) return null;
+
+                const rect = box.getBoundingClientRect();
+                const containerRect = grid.getBoundingClientRect();
+
+                return {
+                    x: rect.left + rect.width / 2 - containerRect.left,
+                    y: rect.top + rect.height / 2 - containerRect.top
+                };
+            }
+
+            const sourcePos = getBoxCenter(sourceId);
+            if (!sourcePos) return;
+
+            // Draw 4 arrows to different targets
+            const targets = [
+                { id: (sourceId + 1) % 16, type: 'lu' },
+                { id: (sourceId + 4) % 16, type: 'quan' },
+                { id: (sourceId + 7) % 16, type: 'ke' },
+                { id: (sourceId + 10) % 16, type: 'ji' }
+            ];
+
+            targets.forEach((target, idx) => {
+                const targetPos = getBoxCenter(target.id);
+                if (!targetPos) return;
+
+                const dx = targetPos.x - sourcePos.x;
+                const dy = targetPos.y - sourcePos.y;
+
+                // Curved path
+                const curvature = 0.2;
+                const midX = (sourcePos.x + targetPos.x) / 2;
+                const midY = (sourcePos.y + targetPos.y) / 2;
+
+                const offsetX = -dy * curvature;
+                const offsetY = dx * curvature;
+
+                const indexOffset = (idx - 1.5) * 15;
+                const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
+                const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
+
+                const controlX = midX + finalOffsetX;
+                const controlY = midY + finalOffsetY;
+
+                const shortenFactor = 0.85;
+                const adjustedTargetX = sourcePos.x + dx * shortenFactor;
+                const adjustedTargetY = sourcePos.y + dy * shortenFactor;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const pathData = `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`;
+                path.setAttribute('d', pathData);
+                path.setAttribute('class', `arrow-${target.type}`);
+                path.setAttribute('stroke-dasharray', '5,3');
+
+                svg.appendChild(path);
+            });
+
+            arrowContainer.appendChild(svg);
+        }
+    </script>
+</body>
+
+</html>
