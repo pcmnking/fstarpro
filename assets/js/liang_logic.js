@@ -48,7 +48,7 @@ const LiangLogic = {
 
         if (!targetPalace) return null;
 
-        const isWealthVault = targetPalace.title === '田宅' || targetPalace.title === '兄弟';
+        const isWealthVault = targetPalace.title === '田宅宮' || targetPalace.title === '兄弟宮';
 
         if (isWealthVault) {
             // Get Star Name for Trace
@@ -81,7 +81,7 @@ const LiangLogic = {
 
     // 2. 精神/福德模組：【祿忌交戰】判定 (The Mental Struggle)
     analyzeMentalState: function (chart) {
-        const fudePalace = this.getPalaceByTitle(chart, '福德');
+        const fudePalace = this.getPalaceByTitle(chart, '福德宮');
         const mingPalace = this.getPalaceByTitle(chart, '命宮');
         if (!fudePalace || !mingPalace) return null;
 
@@ -155,12 +155,12 @@ const LiangLogic = {
 
             // Make the reason string more readable (Chinese translation)
             reasonStr = reasonStr
-                .replace(/ming/g, "命宮").replace(/tian_zhai/g, "田宅")
-                .replace(/fude/g, "福德").replace(/wealth/g, "財帛")
-                .replace(/career/g, "事業").replace(/health/g, "疾厄")
-                .replace(/friends/g, "交友").replace(/spouse/g, "夫妻")
-                .replace(/children/g, "子女").replace(/brother/g, "兄弟")
-                .replace(/migration/g, "遷移").replace(/parents/g, "父母")
+                .replace(/ming/g, "命宮").replace(/tian_zhai/g, "田宅宮")
+                .replace(/fude/g, "福德宮").replace(/wealth/g, "財帛宮")
+                .replace(/career/g, "事業宮").replace(/health/g, "疾厄宮")
+                .replace(/friends/g, "交友宮").replace(/spouse/g, "夫妻宮")
+                .replace(/children/g, "子女宮").replace(/brother/g, "兄弟宮")
+                .replace(/migration/g, "遷移宮").replace(/parents/g, "父母宮")
                 .replace(/lu/g, "祿").replace(/quan/g, "權")
                 .replace(/ke/g, "科").replace(/ji/g, "忌");
 
@@ -232,15 +232,15 @@ const LiangLogic = {
         }
 
         // Special Logic: Overlap Advice
-        if (overlapTitle === '財帛' || overlapTitle === '田宅') {
+        if (overlapTitle === '財帛宮' || overlapTitle === '田宅宮') {
             detailedAdvice = trafficLight === 'Green' ?
                 "今年重點在『錢』。流年重疊財庫且亮綠燈，財運極佳，投資置產獲利機率高。" :
                 (trafficLight === 'Red' ? "今年重點在『錢』。流年重疊財庫但亮紅燈，務必守成，嚴禁大額投資，慎防破財。" : "今年重點在『錢』。財運平穩，宜多儲蓄。");
-        } else if (overlapTitle === '夫妻' || overlapTitle === '子女' || overlapTitle === '交友') { // Adding Friends for broader relationship coverage
+        } else if (overlapTitle === '夫妻宮' || overlapTitle === '子女宮' || overlapTitle === '交友宮') { // Adding Friends for broader relationship coverage
             detailedAdvice = trafficLight === 'Green' ?
                 "今年重點在『情』。流年重疊桃花位且亮綠燈，單身者有良緣，人際關係順遂。" :
                 (trafficLight === 'Red' ? "今年重點在『情』。流年重疊桃花位但亮紅燈，注意感情爭吵或人際是非。" : "今年重點在『情』。人際平順，多陪伴家人。");
-        } else if (overlapTitle === '疾厄' || overlapTitle === '父母') { // Parents often relates to body/appearance
+        } else if (overlapTitle === '疾厄宮' || overlapTitle === '父母宮') { // Parents often relates to body/appearance
             detailedAdvice = trafficLight === 'Green' ?
                 "今年重點在『身』。身體狀況良好，適合健身或進行健康檢查。" :
                 (trafficLight === 'Red' ? "今年重點在『身』。抵抗力較弱，需留意老毛病復發或意外，請多保重。" : "今年重點在『身』。平平安安，注意作息。");
@@ -269,14 +269,14 @@ const LiangLogic = {
     analyzeFamilyMember: function (chart, relationType) {
         // 1. Define Relative's Taiji (Mapping Table)
         const relationMap = {
-            "Father": { palace: "父母", label: "父親" },
-            "Mother": { palace: "兄弟", label: "母親" },
-            "Spouse": { palace: "夫妻", label: "配偶" },
-            "Child_1": { palace: "子女", label: "長子/長女" },
-            "Child_2": { palace: "財帛", label: "次子/次女" },
-            "Child_3": { palace: "疾厄", label: "三子/三女" },
-            "Sibling_1": { palace: "兄弟", label: "長兄/長姊" },
-            "Sibling_2": { palace: "夫妻", label: "二哥/二姊" }
+            "Father": { palace: "父母宮", label: "父親" },
+            "Mother": { palace: "兄弟宮", label: "母親" },
+            "Spouse": { palace: "夫妻宮", label: "配偶" },
+            "Child_1": { palace: "子女宮", label: "長子/長女" },
+            "Child_2": { palace: "財帛宮", label: "次子/次女" },
+            "Child_3": { palace: "疾厄宮", label: "三子/三女" },
+            "Sibling_1": { palace: "兄弟宮", label: "長兄/長姊" },
+            "Sibling_2": { palace: "夫妻宮", label: "二哥/二姊" }
         };
 
         const targetInfo = relationMap[relationType];
@@ -288,7 +288,7 @@ const LiangLogic = {
         // 2. Perform Vital Scan ("1-6-10" Theory relative to New Ming)
         // Determine New Taiji Positions based on sequence offset
         // Standard Sequence: Ming(0), Brother(1), Spouse(2), Children(3), Wealth(4), Health(5), Migration(6), Friends(7), Career(8), Property(9), Fude(10), Parents(11)
-        const palaceSequence = ['命宮', '兄弟', '夫妻', '子女', '財帛', '疾厄', '遷移', '交友', '事業', '田宅', '福德', '父母'];
+        const palaceSequence = ['命宮', '兄弟宮', '夫妻宮', '子女宮', '財帛宮', '疾厄宮', '遷移宮', '交友宮', '事業宮', '田宅宮', '福德宮', '父母宮'];
         const startIdx = palaceSequence.indexOf(targetInfo.palace);
 
         // New Health (Jie) is +5 positions (1 -> 6)

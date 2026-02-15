@@ -93,9 +93,9 @@ class ZiWeiChart {
         // 12 Palace Names (Counter-Clockwise from Ming)
         // Internal App Names
         this.palaceNames = [
-            '命宮', '兄弟', '夫妻', '子女',
-            '財帛', '疾厄', '遷移', '交友',
-            '事業', '田宅', '福德', '父母'
+            '命宮', '兄弟宮', '夫妻宮', '子女宮',
+            '財帛宮', '疾厄宮', '遷移宮', '交友宮',
+            '事業宮', '田宅宮', '福德宮', '父母宮'
         ];
     }
 
@@ -884,9 +884,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Get Interpretation
             let interpretation = '(暫無資料)';
-            // ZIWEI_DATA_SIHUA_N structure seems to be [Palace][Type] = "Interpretation..."
-            if (birthTransData[palaceTitle] && birthTransData[palaceTitle][item.type]) {
-                interpretation = birthTransData[palaceTitle][item.type];
+
+            // Helper to find key match (Try exact, then +宮, then -宮)
+            const findKey = (obj, key) => {
+                if (!obj) return null;
+                if (obj[key]) return key;
+                if (obj[key + '宮']) return key + '宮';
+                if (key.endsWith('宮') && obj[key.slice(0, -1)]) return key.slice(0, -1);
+                return null;
+            };
+
+            const palaceKey = findKey(birthTransData, palaceTitle);
+            if (palaceKey && birthTransData[palaceKey][item.type]) {
+                interpretation = birthTransData[palaceKey][item.type];
             }
 
             const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
