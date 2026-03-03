@@ -1606,10 +1606,76 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Build HTML content
                     let htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>紫微斗數排盤解讀</title><style>
                         @page { size: A4; margin: 15mm; }
-                        body { font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-                        pre { white-space: pre-wrap; word-wrap: break-word; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 14px; line-height: 1.6; }
+                        body { font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 11px; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                        .page-break { page-break-after: always; }
+                        .title-page { padding: 20px; }
+                        h1 { font-size: 24px; color: #d32f2f; margin: 20px 0; text-align: center; }
+                        h2 { font-size: 16px; border-bottom: 2px solid #d32f2f; padding-bottom: 8px; margin: 15px 0 10px 0; }
+                        .params { margin-bottom: 20px; }
+                        .params p { margin: 5px 0; font-size: 11px; }
+                        .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); width: 100%; max-width: 700px; margin: 20px auto; border: 2px solid #333; }
+                        .palace { border: 1px solid #666; padding: 8px; position: relative; text-align: center; min-height: 120px; font-size: 9px; background: white; }
+                        .palace.is-ming { background-color: #fff3e0; }
+                        .palace-title { position: absolute; bottom: 3px; right: 3px; font-weight: bold; font-size: 10px; color: #d32f2f; }
+                        .celestial { color: #c00; font-weight: bold; font-size: 11px; margin-bottom: 3px; }
+                        .name { font-size: 9px; color: #666; }
+                        .star { font-size: 9px; margin: 1px 0; color: #333; }
+                        .trans { color: #090; font-size: 8px; margin-top: 2px; }
+                        .巳 { grid-column: 1; grid-row: 1; } .午 { grid-column: 2; grid-row: 1; } .未 { grid-column: 3; grid-row: 1; } .申 { grid-column: 4; grid-row: 1; }
+                        .辰 { grid-column: 1; grid-row: 2; } .酉 { grid-column: 4; grid-row: 2; } .卯 { grid-column: 1; grid-row: 3; } .戌 { grid-column: 4; grid-row: 3; }
+                        .寅 { grid-column: 1; grid-row: 4; } .丑 { grid-column: 2; grid-row: 4; } .子 { grid-column: 3; grid-row: 4; } .亥 { grid-column: 4; grid-row: 4; }
+                        .center-info { grid-column: 2 / 4; grid-row: 2 / 4; background-color: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 10px; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; color: #999; }
+                        .dayun-title { position: absolute; top: 3px; right: 5px; font-size: 8px; color: #1976d2; font-weight: bold; }
+                        .liunian-title { position: absolute; top: 3px; left: 5px; font-size: 8px; color: #388e3c; font-weight: bold; }
+                        pre { white-space: pre-wrap; word-wrap: break-word; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 14px; line-height: 1.6; padding: 20px; }
                         @media print { .no-print { display: none; } }
                     </style></head><body>`;
+
+                    // Generate chart HTML
+                    function generateChartHTML() {
+                        const layoutOrder = ['巳', '午', '未', '申', '辰', '酉', '卯', '戌', '寅', '丑', '子', '亥'];
+                        let chartHTML = '<div class="chart-grid">';
+                        layoutOrder.forEach(b => {
+                            const p = chart.palaces[b];
+                            const classes = ['palace', b];
+                            if (p.isMing) classes.push('is-ming');
+                            const starsHtml = p.stars.map(s => '<div class="star">' + s + '</div>').join('');
+                            let transHtml = '';
+                            if (p.trans.length > 0) {
+                                const tStr = p.trans.map(t => t.star + t.type).join(' ');
+                                transHtml = '<div class="trans">' + tStr + '</div>';
+                            }
+                            let extraHtml = '';
+                            if (ui.dayunPos.value) {
+                                const mingIdx = chart._getIndex(ui.dayunPos.value);
+                                const currentIdx = chart._getIndex(b);
+                                let offset = (mingIdx - currentIdx) % 12;
+                                if (offset < 0) offset += 12;
+                                const title = chart.palaceNames[offset];
+                                extraHtml += '<div class="dayun-title">大限' + title.replace('宮', '') + '</div>';
+                            }
+                            if (ui.liunianPos.value) {
+                                const mingIdx = chart._getIndex(ui.liunianPos.value);
+                                const currentIdx = chart._getIndex(b);
+                                let offset = (mingIdx - currentIdx) % 12;
+                                if (offset < 0) offset += 12;
+                                const title = chart.palaceNames[offset];
+                                extraHtml += '<div class="liunian-title">流年' + title.replace('宮', '') + '</div>';
+                            }
+                            chartHTML += '<div class="' + classes.join(' ') + '"><div class="palace-title">' + p.title + '</div><div class="celestial">' + p.celestial + '</div><div class="name">' + p.name + '</div>' + starsHtml + transHtml + extraHtml + '</div>';
+                        });
+                        chartHTML += '<div class="center-info">紫微斗數命盤</div></div>';
+                        return chartHTML;
+                    }
+
+                    // Add chart at top
+                    htmlContent += '<div class="title-page page-break"><h1>紫微斗數排盤解讀</h1><div class="params"><h2>命盤參數</h2>';
+                    htmlContent += '<p><strong>出生年天干：</strong>' + ui.birthStem.value + ' | <strong>寅宮天干：</strong>' + ui.yinStem.value + '</p>';
+                    htmlContent += '<p><strong>命宮位置：</strong>' + ui.mingPos.value + ' | <strong>紫微位置：</strong>' + ui.ziweiPos.value + '</p>';
+                    htmlContent += '<p><strong>文曲：</strong>' + ui.wenquPos.value + ' | <strong>文昌：</strong>' + ui.wenchangPos.value + ' | <strong>左輔：</strong>' + ui.zuofuPos.value + ' | <strong>右弼：</strong>' + ui.youbiPos.value + '</p>';
+                    if (ui.dayunPos.value) htmlContent += '<p><strong>大運命宮：</strong>' + ui.dayunPos.value + '</p>';
+                    if (ui.liunianPos.value) htmlContent += '<p><strong>流年命宮：</strong>' + ui.liunianPos.value + '</p>';
+                    htmlContent += '</div>' + generateChartHTML() + '</div>';
 
                     htmlContent += '<pre>' + textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
 
