@@ -1612,21 +1612,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         h1 { font-size: 24px; color: #d32f2f; margin: 20px 0; text-align: center; }
                         h2 { font-size: 16px; border-bottom: 2px solid #d32f2f; padding-bottom: 8px; margin: 15px 0 10px 0; }
                         .params { margin-bottom: 20px; }
-                        .params p { margin: 5px 0; font-size: 11px; }
-                        .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); width: 100%; max-width: 700px; margin: 20px auto; border: 2px solid #333; }
-                        .palace { border: 1px solid #666; padding: 8px; position: relative; text-align: center; min-height: 120px; font-size: 9px; background: white; }
+                        .params p { margin: 5px 0; font-size: 13px; }
+                        .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); width: 100%; max-width: 780px; margin: 20px auto; border: 2px solid #333; }
+                        .palace { border: 1px solid #666; padding: 10px; position: relative; text-align: center; min-height: 140px; font-size: 13px; background: white; }
                         .palace.is-ming { background-color: #fff3e0; }
-                        .palace-title { position: absolute; bottom: 3px; right: 3px; font-weight: bold; font-size: 10px; color: #d32f2f; }
-                        .celestial { color: #c00; font-weight: bold; font-size: 11px; margin-bottom: 3px; }
-                        .name { font-size: 9px; color: #666; }
-                        .star { font-size: 9px; margin: 1px 0; color: #333; }
-                        .trans { color: #090; font-size: 8px; margin-top: 2px; }
+                        .palace-title { position: absolute; bottom: 5px; right: 5px; font-weight: bold; font-size: 15px; color: #d32f2f; }
+                        .celestial { color: #c00; font-weight: bold; font-size: 15px; margin-bottom: 5px; }
+                        .name { font-size: 13px; color: #666; }
+                        .star { font-size: 13px; margin: 2px 0; color: #333; font-weight: bold; }
+                        .trans { color: #090; font-size: 11px; margin-top: 3px; }
                         .巳 { grid-column: 1; grid-row: 1; } .午 { grid-column: 2; grid-row: 1; } .未 { grid-column: 3; grid-row: 1; } .申 { grid-column: 4; grid-row: 1; }
                         .辰 { grid-column: 1; grid-row: 2; } .酉 { grid-column: 4; grid-row: 2; } .卯 { grid-column: 1; grid-row: 3; } .戌 { grid-column: 4; grid-row: 3; }
                         .寅 { grid-column: 1; grid-row: 4; } .丑 { grid-column: 2; grid-row: 4; } .子 { grid-column: 3; grid-row: 4; } .亥 { grid-column: 4; grid-row: 4; }
-                        .center-info { grid-column: 2 / 4; grid-row: 2 / 4; background-color: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 10px; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; color: #999; }
-                        .dayun-title { position: absolute; top: 3px; right: 5px; font-size: 8px; color: #1976d2; font-weight: bold; }
-                        .liunian-title { position: absolute; top: 3px; left: 5px; font-size: 8px; color: #388e3c; font-weight: bold; }
+                        .center-info { grid-column: 2 / 4; grid-row: 2 / 4; background-color: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-align: center; color: #333; font-weight: bold; }
+                        .dayun-title { position: absolute; top: 5px; right: 5px; font-size: 10px; color: #1976d2; font-weight: bold; }
+                        .liunian-title { position: absolute; top: 5px; left: 5px; font-size: 10px; color: #388e3c; font-weight: bold; }
                         pre { white-space: pre-wrap; word-wrap: break-word; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 14px; line-height: 1.6; padding: 20px; }
                         @media print { .no-print { display: none; } }
                     </style></head><body>`;
