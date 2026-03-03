@@ -1085,6 +1085,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // chart.palaceNames[i] is the title relative to the layer Ming.
                 let layerTitle = chart.palaceNames[i];
 
+                let layerPrefix = '';
+                if (title.includes('大運')) layerPrefix = '大運';
+                else if (title.includes('流年')) layerPrefix = '流年';
+                else if (title.includes('本命')) layerPrefix = '本命';
+                let displayLayerTitle = layerPrefix + layerTitle;
+
                 // **FILTER: Skip this palace if not selected**
                 if (!selectedPalaces.has(layerTitle)) {
                     continue;
@@ -1097,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="palace-section" style="margin-bottom: 25px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 3px solid ${themeColor};">
                         <h3 style="margin-top:0; border-bottom: 2px solid #ddd; padding-bottom: 10px; color: #333;">
                             <span style="display:inline-block; width: 32px; height: 32px; background: ${themeColor}; color: #fff; text-align: center; line-height: 32px; border-radius: 50%; margin-right: 10px; font-size: 1rem;">${stem}</span>
-                            ${layerTitle} <span style="font-size:0.8em; font-weight:normal; color:#666;">(在${currentBranch})</span>
+                            ${displayLayerTitle} <span style="font-size:0.8em; font-weight:normal; color:#666;">(在${currentBranch})</span>
                         </h3>
                         <div style="display: flex; flex-direction: column; gap: 10px;">
                 `;
@@ -1123,14 +1129,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             const isZiHua = (layerTitle === targetTitle);
 
                             if (isZiHua) {
-                                displayTitle = `<strong style="color:${color}">自化${type}</strong>`;
+                                displayTitle = `${displayLayerTitle} <strong style="color:${color}">自化${type}</strong>`;
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
                                     interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'];
                                 } else {
                                     interpretation = '(暫無自化象義)';
                                 }
                             } else {
-                                displayTitle = `<strong style="color:${color}">${type}入</strong> ${targetTitle}`;
+                                displayTitle = `${displayLayerTitle} <strong style="color:${color}">${type}入</strong> ${targetTitle}`;
                                 interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
                             }
                         } else {
@@ -1368,7 +1374,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 let pObj = chart.palaces[currentBranch];
                 let stem = pObj.celestial;
                 let layerTitle = chart.palaceNames[i];
-                text += layerTitle + '（宮干：' + stem + ' | 位置：' + currentBranch + '）\n';
+
+                let layerPrefix = '';
+                if (layerName.includes('大運')) layerPrefix = '大運';
+                else if (layerName.includes('流年')) layerPrefix = '流年';
+                else if (layerName.includes('本命')) layerPrefix = '本命';
+                let displayLayerTitle = layerPrefix + layerTitle;
+
+                text += displayLayerTitle + '（宮干：' + stem + ' | 位置：' + currentBranch + '）\n';
                 text += '-'.repeat(50) + '\n';
                 let transStars = chart.fourTransMap[stem];
                 if (transStars) {
@@ -1381,13 +1394,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetTitle = targetPalaceObj.title;
                             const isZiHua = (layerTitle === targetTitle);
                             if (isZiHua) {
-                                displayTitle = '自化' + type;
+                                displayTitle = displayLayerTitle + ' 自化' + type;
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
                                     interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
                                 }
                                 if (!interpretation) interpretation = '(暫無自化象義)';
                             } else {
-                                displayTitle = type + '入 ' + targetTitle;
+                                displayTitle = displayLayerTitle + ' ' + type + '入 ' + targetTitle;
                                 interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
                             }
                         } else {

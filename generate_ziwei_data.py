@@ -83,7 +83,7 @@ simp_trad_map = {
     '缱': '繾', '缲': '繰', '缳': '繯', '缴': '繳', '缢': '縊', '缵': '纘', '缆': '纜', '绒': '絨',
     '絮': '絮', '绩': '績', '绢': '絹', '绣': '繡', '绥': '綏', '继': '繼', '绮': '綺', '绯': '緋',
     '绰': '綽', '绱': '緔', '绲': '緄', '绳': '繩', '绶': '綬', '绷': '繃', '绨': '緇', '丑': '丑',
-    '斗': '斗', '面': '面'
+    '斗': '斗', '面': '面', '财': '財', '迁': '遷', '禄': '祿', '业': '業', '宫': '宮', '仆': '僕'
 }
 
 # Specific mapping for Ziwei Context
@@ -137,7 +137,7 @@ trans_keys = ['祿', '權', '科', '忌']
 trans_map = {'祿': '祿', '禄': '祿', '權': '權', '权': '權', '科': '科', '忌': '忌'}
 
 for sheet_name, rows in sheets.items():
-    source_palace_raw = sheet_name
+    source_palace_raw = to_traditional(sheet_name)
     source_palace = normalize_palace(source_palace_raw)
     
     # Initialize dictionaries
@@ -193,6 +193,13 @@ for sheet_name, rows in sheets.items():
         trans_type_raw = row.get("Unnamed:1")
         interpretation = row.get("Unnamed:2")
         
+        # Patch for JSON typos where 科 and 忌 are mislabeled as 權 (for 田宅宮->父母宮)
+        if source_palace == '田宅宮' and locals().get('current_context_target', '') == '父母宮' and trans_type_raw in ['權', '权']:
+            if interpretation and '科入' in interpretation:
+                trans_type_raw = '科'
+            elif interpretation and '忌入' in interpretation:
+                trans_type_raw = '忌'
+        
         if header_val:
             # New Section
             header_val = header_val.strip()
@@ -206,7 +213,7 @@ for sheet_name, rows in sheets.items():
                 # Parse Target
                 parts = header_val.split("→")
                 if len(parts) >= 2:
-                    current_target_raw = parts[1].strip()
+                    current_target_raw = to_traditional(parts[1].strip())
                     current_target = normalize_palace(current_target_raw)
                     current_context_target = current_target
             elif header_val == source_palace_raw:
