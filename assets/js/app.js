@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Determine palace title background color
-            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold;';
+            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor:pointer;';
 
             // Add background color if this palace title matches
             if (matchingPalaces.dayun.has(p.title) || matchingPalaces.liunian.has(p.title)) {
@@ -1747,42 +1747,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Format and display star data in center panel
                 let html = `<h3>【${starName}】星曜特質分析</h3>`;
 
-                html += `<div class="analysis-item">`;
+                html += `<div class="analysis-item" style="max-height: 400px; overflow-y: auto;">`;
 
-                if (data["代表人物"]) html += `<p><strong>代表人物：</strong>${data["代表人物"]}</p>`;
-                if (data["五行"]) html += `<p><strong>五行：</strong>${data["五行"]}</p>`;
+                if (typeof data === 'string') {
+                    html += `<p style="white-space: pre-wrap; line-height: 1.6;">${data}</p>`;
+                } else {
+                    if (data["代表人物"]) html += `<p><strong>代表人物：</strong>${data["代表人物"]}</p>`;
+                    if (data["五行"]) html += `<p><strong>五行：</strong>${data["五行"]}</p>`;
 
-                if (data["特質"] && Array.isArray(data["特質"])) {
-                    html += `<p><strong>特質：</strong></p><ul>`;
-                    data["特質"].forEach(item => html += `<li>${item}</li>`);
-                    html += `</ul>`;
-                }
-
-                if (data["身體部位_化忌"]) {
-                    html += `<p><strong>身體部位_化忌：</strong></p>`;
-                    if (Array.isArray(data["身體部位_化忌"])) {
-                        html += `<ul>`;
-                        data["身體部位_化忌"].forEach(item => html += `<li>${item}</li>`);
+                    if (data["特質"] && Array.isArray(data["特質"])) {
+                        html += `<p><strong>特質：</strong></p><ul>`;
+                        data["特質"].forEach(item => html += `<li>${item}</li>`);
                         html += `</ul>`;
-                    } else {
-                        html += `<p>${data["身體部位_化忌"]}</p>`;
+                    } else if (data["特質"] && typeof data["特質"] === 'string') {
+                        html += `<p><strong>特質：</strong><br><span style="white-space: pre-wrap;">${data["特質"]}</span></p>`;
                     }
-                }
 
-                if (data["四化"]) {
-                    html += `<p><strong>四化：</strong></p><ul>`;
-                    const trans = data["四化"];
-                    if (trans["化祿"]) html += `<li><span style="color:#d32f2f">化祿</span>：${trans["化祿"]}</li>`;
-                    if (trans["化權"]) html += `<li><span style="color:#388e3c">化權</span>：${trans["化權"]}</li>`;
-                    if (trans["化科"]) html += `<li><span style="color:#1976d2">化科</span>：${trans["化科"]}</li>`;
-                    if (trans["化忌"]) html += `<li><span style="color:#7b1fa2">化忌</span>：${trans["化忌"]}</li>`;
-                    html += `</ul>`;
-                }
+                    if (data["身體部位_化忌"]) {
+                        html += `<p><strong>身體部位_化忌：</strong></p>`;
+                        if (Array.isArray(data["身體部位_化忌"])) {
+                            html += `<ul>`;
+                            data["身體部位_化忌"].forEach(item => html += `<li>${item}</li>`);
+                            html += `</ul>`;
+                        } else {
+                            html += `<p>${data["身體部位_化忌"]}</p>`;
+                        }
+                    }
 
-                if (data["化象註解"] && Array.isArray(data["化象註解"])) {
-                    html += `<p><strong>化象註解：</strong></p><ul>`;
-                    data["化象註解"].forEach(item => html += `<li>${item}</li>`);
-                    html += `</ul>`;
+                    if (data["四化"]) {
+                        html += `<p><strong>四化：</strong></p><ul>`;
+                        const trans = data["四化"];
+                        if (trans["化祿"]) html += `<li><span style="color:#d32f2f">化祿</span>：${trans["化祿"]}</li>`;
+                        if (trans["化權"]) html += `<li><span style="color:#388e3c">化權</span>：${trans["化權"]}</li>`;
+                        if (trans["化科"]) html += `<li><span style="color:#1976d2">化科</span>：${trans["化科"]}</li>`;
+                        if (trans["化忌"]) html += `<li><span style="color:#7b1fa2">化忌</span>：${trans["化忌"]}</li>`;
+                        html += `</ul>`;
+                    }
+
+                    if (data["化象註解"] && Array.isArray(data["化象註解"])) {
+                        html += `<p><strong>化象註解：</strong></p><ul>`;
+                        data["化象註解"].forEach(item => html += `<li>${item}</li>`);
+                        html += `</ul>`;
+                    }
+
+                    // Fallback for flat object properties that are not handled above
+                    for (const key in data) {
+                        if (!["代表人物", "五行", "特質", "身體部位_化忌", "四化", "化象註解"].includes(key)) {
+                            const val = data[key];
+                            if (typeof val === 'string' || typeof val === 'number') {
+                                html += `<p><strong>${key}：</strong><br><span style="white-space: pre-wrap;">${val}</span></p>`;
+                            } else if (Array.isArray(val)) {
+                                html += `<p><strong>${key}：</strong></p><ul>`;
+                                val.forEach(item => html += `<li>${item}</li>`);
+                                html += `</ul>`;
+                            }
+                        }
+                    }
                 }
 
                 html += `</div>`;
@@ -1790,6 +1810,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 midPanel.innerHTML = html;
             } else if (midPanel) {
                 midPanel.innerHTML = `<h3>【${starName}】</h3><p style="text-align:center;">暫無此星曜詳細資料。</p>`;
+            }
+        }
+
+        // Handle Palace Title Click (New)
+        if (e.target.classList.contains('palace-title')) {
+            const palaceName = e.target.innerText.trim();
+            let data = null;
+
+            // Try to find palace data in global ZIWEI_DATA_PALACE_MEANING
+            if (typeof ZIWEI_DATA_PALACE_MEANING !== 'undefined') {
+                data = ZIWEI_DATA_PALACE_MEANING[palaceName] || ZIWEI_DATA_PALACE_MEANING[palaceName + '宮'] || ZIWEI_DATA_PALACE_MEANING[palaceName.replace('宮', '')];
+            }
+
+            const midPanel = document.getElementById('mid-panel');
+            if (midPanel && data) {
+                let html = `<h3>【${palaceName}】宮位意義</h3>`;
+                html += `<div class="analysis-item" style="max-height: 400px; overflow-y: auto;">`;
+
+                if (typeof data === 'string') {
+                    html += `<p style="white-space: pre-wrap; line-height: 1.6;">${data}</p>`;
+                } else if (Array.isArray(data)) {
+                    html += `<ul>`;
+                    data.forEach(item => html += `<li>${item}</li>`);
+                    html += `</ul>`;
+                } else if (typeof data === 'object') {
+                    for (const key in data) {
+                        const val = data[key];
+                        if (typeof val === 'string' || typeof val === 'number') {
+                            html += `<p><strong>${key}：</strong><br><span style="white-space: pre-wrap; line-height: 1.6;">${val}</span></p>`;
+                        } else if (Array.isArray(val)) {
+                            html += `<p><strong>${key}：</strong></p><ul>`;
+                            val.forEach(item => html += `<li>${item}</li>`);
+                            html += `</ul>`;
+                        }
+                    }
+                }
+                html += `</div>`;
+                midPanel.innerHTML = html;
+            } else if (midPanel) {
+                midPanel.innerHTML = `<h3>【${palaceName}】</h3><p style="text-align:center;">暫無此宮位詳細資料。</p>`;
             }
         }
     });
