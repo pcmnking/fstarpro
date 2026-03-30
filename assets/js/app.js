@@ -273,8 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
         palaceCheckboxes: document.getElementById('palace-checkboxes'),
         selectAllBtn: document.getElementById('selectAllPalaces'),
         deselectAllBtn: document.getElementById('deselectAllPalaces'),
-        clearArrowsBtn: document.getElementById('clearArrowsBtn')
+        clearArrowsBtn: document.getElementById('clearArrowsBtn'),
+        oppositeTransBtn: document.getElementById('oppositeTransBtn')
     };
+
+    let showOppositeArrows = false; // Toggle for opposite palace flying stars
 
     let activeSourceBranches = new Set(); // Track the specific clicked palace branches
     let activeTargetStars = new Set(); // Track the clicked stars for incoming transformations
@@ -477,6 +480,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('marker-end', `url(#arrowhead-${type})`);
+
+        svg.appendChild(path);
+    }
+
+    // Helper to draw solid arrow path for Opposite Palace Flying
+    function drawSolidArrowPath(svg, sourcePos, targetPos, typeClass, offsetIndex) {
+        const dx = targetPos.x - sourcePos.x;
+        const dy = targetPos.y - sourcePos.y;
+
+        // Straight line for opposite palace
+        const adjustedTargetX = sourcePos.x + dx * 0.9;
+        const adjustedTargetY = sourcePos.y + dy * 0.9;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const pathData = `M ${sourcePos.x} ${sourcePos.y} L ${adjustedTargetX} ${adjustedTargetY}`;
+        path.setAttribute('d', pathData);
+        path.setAttribute('class', `arrow-opposite-${typeClass}`);
+
+        const type = typeClass.replace('arrow-', '');
+        const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+        path.setAttribute('stroke', colorMap[type]);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-width', '4'); // Even thicker to be prominent
+        path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('marker-end', `url(#arrowhead-${type})`);
 
         svg.appendChild(path);
@@ -487,38 +516,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const arrowContainer = document.getElementById('arrow-container');
         if (!arrowContainer) return;
 
-        const sourcePalace = chart.palaces[sourceBranch];
-        const activeStem = sourcePalace.celestial;
-        const activeTransStars = chart.fourTransMap[activeStem];
-
-        if (!activeTransStars) return;
-
-        // Create or get SVG element
+        // --- Marker Initialization (Ensure SVG and Arrowheads exist) ---
         let svg = arrowContainer.querySelector('svg');
         if (!svg) {
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 600 600');
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '100%');
             svg.style.position = 'absolute';
             svg.style.top = '0';
             svg.style.left = '0';
             svg.style.pointerEvents = 'none';
+            svg.style.overflow = 'visible';
             arrowContainer.appendChild(svg);
+        }
 
-            // Define arrow markers for each transformation type
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const colors = {
-                '祿': '#d32f2f',
-                '權': '#388e3c',
-                '科': '#1976d2',
-                '忌': '#7b1fa2'
-            };
-            const types = ['祿', '權', '科', '忌'];
-            const typeClasses = ['lu', 'quan', 'ke', 'ji'];
-
-            types.forEach((type, idx) => {
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const colors = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+            Object.keys(colors).forEach(type => {
                 const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-                marker.setAttribute('id', `arrowhead-${typeClasses[idx]}`);
+                marker.setAttribute('id', `arrowhead-${type}`);
                 marker.setAttribute('markerWidth', '10');
                 marker.setAttribute('markerHeight', '10');
                 marker.setAttribute('refX', '9');
@@ -534,6 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             svg.appendChild(defs);
         }
+
+        if (!sourceBranch) return; // Exit after initialization if no branch provided
+
+        const sourcePalace = chart.palaces[sourceBranch];
+        if (!sourcePalace) return;
+        const activeStem = sourcePalace.celestial;
+        const activeTransStars = chart.fourTransMap[activeStem];
+        if (!activeTransStars) return;
 
         const sourcePos = getPalaceCenter(sourceBranch);
         if (!sourcePos) return;
@@ -558,6 +585,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
             drawArrowPath(svg, sourcePos, targetPos, typeClass, idx);
         });
+    }
+
+    // Helper function to draw opposite palace transformation arrows (solid lines)
+    function drawOppositeTransformationArrows() {
+        const arrowContainer = document.getElementById('arrow-container');
+        if (!arrowContainer) return;
+
+        // Ensure SVG and markers are initialized
+        drawTransformationArrows(''); 
+        let svg = arrowContainer.querySelector('svg');
+        if (!svg) {
+            console.error("Failed to initialize SVG for opposite arrows");
+            return;
+        }
+
+        console.log("Start drawing opposite palace arrows...");
+        let count = 0;
+        Object.keys(chart.palaces).forEach(sourceBranch => {
+            const sourcePalace = chart.palaces[sourceBranch];
+            const sourceStem = sourcePalace.celestial;
+            const transStars = chart.fourTransMap[sourceStem];
+            if (!transStars) return;
+
+            // Find opposite branch index
+            const sourceIdx = chart._getIndex(sourceBranch);
+            const oppositeIdx = (sourceIdx + 6) % 12;
+            const oppositeBranch = chart._getBranch(oppositeIdx);
+            const oppositePalace = chart.palaces[oppositeBranch];
+
+            const sourcePos = getPalaceCenter(sourceBranch);
+            const targetPos = getPalaceCenter(oppositeBranch);
+
+            if (!sourcePos || !targetPos) {
+                console.warn(`Could not find coordinates for ${sourceBranch} or ${oppositeBranch}`);
+                return;
+            }
+
+            const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+
+            transStars.forEach((star, idx) => {
+                // Only Lu (0) and Ji (3) - Usually used for Opposite Flying
+                if (idx !== 0 && idx !== 3) return;
+
+                if (oppositePalace.stars.includes(star)) {
+                    count++;
+                    drawSolidArrowPath(svg, sourcePos, targetPos, typeClasses[idx], idx);
+                }
+            });
+        });
+        console.log(`Opposite arrows drawn: ${count}`);
     }
 
     // Helper function to draw incoming transformation arrows
@@ -744,8 +821,29 @@ document.addEventListener('DOMContentLoaded', () => {
             let transHtml = '';
             // 1. Birth Year Trans
             if (p.trans.length > 0) {
-                let tStr = p.trans.map(t => `${t.star}${t.type}`).join(' ');
-                transHtml += `<div class="trans">${tStr}</div>`;
+                let tStr = p.trans.map(t => `<span class="birth-trans">生年${t.type}・${t.star}</span>`).join(' ');
+                transHtml += `<div class="trans" style="margin-bottom: 5px;">${tStr}</div>`;
+            }
+
+            // --- Detect Self-Transformation (自化) ---
+            const currentStem = p.celestial;
+            const selfTransStars = chart.fourTransMap[currentStem];
+            let zihuaHtml = '';
+            let zihuaInfo = []; // To store for click handler
+            
+            if (selfTransStars) {
+                selfTransStars.forEach((star, idx) => {
+                    const type = chart.transTypes[idx];
+                    if (p.stars.includes(star)) {
+                        const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                        const color = colors[type];
+                        zihuaHtml += `<div class="zihua-label" data-type="${type}" data-star="${star}" style="color: ${color}; border: 1px solid ${color}; padding: 1px 3px; border-radius: 3px; font-size: 0.8em; margin-top: 2px; cursor: pointer; display: inline-block; margin-right: 2px;">自化${type}</div>`;
+                        zihuaInfo.push({ type, star });
+                    }
+                });
+            }
+            if (zihuaHtml) {
+                transHtml += `<div class="zihua-container">${zihuaHtml}</div>`;
             }
 
             // 2. Active Highlight Trans (Based on Stem)
@@ -853,13 +951,177 @@ document.addEventListener('DOMContentLoaded', () => {
             drawIncomingTransformationArrows(star);
         });
 
-        // --- Liang Logic Integration ---
-        if (window.LiangLogic) {
-            const reportHtml = window.LiangLogic.generateLiangStyleReport(chart);
-            const reportContainer = document.getElementById('liang-analysis-report');
-            if (reportContainer) {
-                reportContainer.innerHTML = reportHtml;
-            }
+        // Draw opposite palace arrows if active
+        if (showOppositeArrows) {
+            drawOppositeTransformationArrows();
+        }
+
+        // Add Click Events to Self-Transformation Labels
+        document.querySelectorAll('.zihua-label').forEach(label => {
+            label.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const type = label.dataset.type;
+                const star = label.dataset.star;
+                const palaceDiv = label.closest('.palace');
+                const branch = palaceDiv.dataset.branch;
+                const palaceTitle = chart.palaces[branch].title;
+
+                // Find if there's an incoming flyer from the opposite palace
+                const sourceIdx = chart._getIndex(branch);
+                const oppositeIdx = (sourceIdx + 6) % 12;
+                const oppositeBranch = chart._getBranch(oppositeIdx);
+                const oppositePalace = chart.palaces[oppositeBranch];
+                const oppositeStem = oppositePalace.celestial;
+                const oppositeTransStars = chart.fourTransMap[oppositeStem];
+                
+                let collisionFound = false;
+                let interpretationText = '';
+
+                const birthToneHtml = getBirthToneHtml(palaceTitle);
+                let fullAnalysisHtml = '';
+                let incomingInteractions = [];
+
+                if (oppositeTransStars) {
+                    console.log(`Scan: Clicking ${palaceTitle} Self-${type}. Checking opposite ${oppositePalace.title}...`);
+                    oppositeTransStars.forEach((oppStar, oppIdx) => {
+                        const oppType = chart.transTypes[oppIdx];
+                        const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(oppStar));
+                        const targetTitle = (targetPalace ? targetPalace.title : 'None');
+                        
+                        // If any flying star from opposite lands in THIS palace, add to interactions
+                        if (targetTitle === palaceTitle) {
+                            incomingInteractions.push({ type: oppType, star: oppStar });
+                            
+                        // Logic for pulling from the new detailed collision data structure
+                        if (targetTitle === palaceTitle && (oppType === '祿' || oppType === '忌')) {
+                            const firingPalaceTitle = oppositePalace.title;
+                            
+                            // Normalize titles for robust lookup (事業=官祿, 交友=奴僕, etc.)
+                            const normalize = (t) => {
+                                let nt = t.replace('宮', '');
+                                if (nt === '事業') return '官祿';
+                                if (nt === '官祿') return '官祿';
+                                if (nt === '交友') return '奴僕'; // Wait, let's check data keys
+                                return nt;
+                            };
+
+                            const nTitle = normalize(firingPalaceTitle);
+                            const palaceData = ZIWEI_DATA_COLLISION[nTitle] || ZIWEI_DATA_COLLISION[nTitle + '宮'] || ZIWEI_DATA_COLLISION[firingPalaceTitle] || ZIWEI_DATA_COLLISION[firingPalaceTitle + '宮'];
+                            
+                            if (palaceData && palaceData[oppType]) {
+                                incomingInteractions.push({ type: oppType, star: oppStar });
+                                
+                                // Determine if it's a collision (Same type) or cross-type interaction
+                                const isSameType = (oppType === type);
+                                collisionFound = true; // Any Lu/Ji intersection is now a "detailed analysis" case
+                                
+                                let currentInterpretation = '';
+                                if (type === '祿') {
+                                    currentInterpretation = palaceData[oppType].self_lu;
+                                } else if (type === '忌') {
+                                    currentInterpretation = palaceData[oppType].self_ji;
+                                }
+
+                                if (currentInterpretation) {
+                                    interpretationText += `<div style="margin-bottom:10px; padding:10px; background:#fff7e6; border-radius:6px; border-left:4px solid #d32f2f;">
+                                        <b style="color:#d32f2f;">[${oppType}入遇自化${type}]：</b>${currentInterpretation}
+                                    </div>`;
+                                }
+                                
+                                console.log(`>>> DETAILED MATCH: Opposite ${oppType} -> Self-${type} at ${palaceTitle}`);
+                            }
+                        }
+                        }
+                    });
+                }
+
+                // --- Generate HTML ---
+                if (collisionFound) {
+                    fullAnalysisHtml = `
+                        ${birthToneHtml}
+                        <div style="padding: 15px; border: 2px solid #d48806; border-radius: 8px; background: #fffbe6; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <h3 style="color: #d48806; margin-top: 0;">⚡ 對宮飛化遇自化碰撞分析</h3>
+                            <p style="margin:0 0 10px 0;"><strong>目前點擊：</strong>${palaceTitle} 【自化${type}】</p>
+
+                            <hr style="border: 0; border-top: 1px solid #ffe58f; margin:15px 0;">
+                            <div style="font-size: 1.15em; color: #333; line-height: 1.7;">
+                                <strong style="color:#d32f2f;">🔥 碰撞專屬象義：</strong><br>
+                                ${interpretationText}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Standard Self-Transformation text if no collision
+                    let text = '(暫無資料)';
+                    if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[palaceTitle] && ZIWEI_DATA_ZIHUA[palaceTitle][type]) {
+                        text = ZIWEI_DATA_ZIHUA[palaceTitle][type][palaceTitle] || ZIWEI_DATA_ZIHUA[palaceTitle][type][palaceTitle + '宮'];
+                    }
+                    fullAnalysisHtml = `
+                        ${birthToneHtml}
+                        <div style="padding: 15px; border: 1px solid #eee; border-radius: 8px; background:#fafafa;">
+                            <h3 style="margin-top: 0; color:#2c3e50; border-bottom:1px solid #ddd; padding-bottom:8px;">自化單獨解析：${palaceTitle} 自化${type}</h3>
+
+                            <div style="font-size: 1.1em; color: #444; line-height: 1.6; margin-top:15px; background:#fff; padding:12px; border-radius:6px; border:1px solid #eee;">
+                                <strong>💡 基礎象義：</strong><br>${text}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Only update the right panel for maximum visibility and to keep the center clear
+                if (ui.analysisContainer) {
+                    ui.analysisContainer.innerHTML = fullAnalysisHtml;
+                    ui.analysisContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // --- Helper: Generate Birth Year Tone (Golden Table) ---
+        function getBirthToneHtml(palaceTitle) {
+            let birthTransData = {};
+            if (typeof ZIWEI_DATA_SIHUA_N !== 'undefined') birthTransData = ZIWEI_DATA_SIHUA_N;
+            
+            const transData = chart.getTransSummary();
+            const relevantTrans = [];
+            
+            transData.forEach(item => {
+                const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(item.star));
+                if (targetPalace && targetPalace.title === palaceTitle) {
+                    let interpretation = '(暫無資料)';
+                    if (birthTransData[palaceTitle] && birthTransData[palaceTitle][item.type]) {
+                        interpretation = birthTransData[palaceTitle][item.type];
+                    }
+                    relevantTrans.push({ ...item, interpretation });
+                }
+            });
+
+            if (relevantTrans.length === 0) return '';
+
+            let tableHtml = `
+                <div class="birth-tone-table">
+                    <div style="background: #ffd700; color: #8b4513; padding: 8px; font-weight: bold; font-size: 0.9em; text-align: center;">
+                        ✨ ${palaceTitle}・先天基調 (生年四化)
+                    </div>
+                    <table style="width:100%; border-collapse: collapse;">
+            `;
+
+            relevantTrans.forEach(rt => {
+                const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                const color = colors[rt.type] || '#333';
+                tableHtml += `
+                    <tr>
+                        <td style="width: 70px; border-top: 1px solid #ffe58f; text-align: center; font-weight: bold; color: ${color};">
+                            [${rt.type}] ${rt.star}
+                        </td>
+                        <td style="border-top: 1px solid #ffe58f; padding: 10px; font-size: 0.9em; line-height: 1.4; color: #555;">
+                            ${rt.interpretation}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `</table></div>`;
+            return tableHtml;
         }
         // -------------------------------
 
@@ -927,8 +1189,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeSourceBranches.forEach(activeSourceBranch => {
                     const sourcePalace = chart.palaces[activeSourceBranch];
                     const activeStem = sourcePalace.celestial;
+                    
+                    const birthToneHtml = getBirthToneHtml(sourcePalace.title);
+                    analysisHtml += birthToneHtml;
 
-                    analysisHtml += `<div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">`;
+                    analysisHtml += `<div style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 10px;">`;
                     analysisHtml += `<h4>【${sourcePalace.title}】四化飛伏</h4>`;
                     analysisHtml += `<p style="font-size:0.9em; margin-bottom:10px;">宮干：${activeStem} | 宮位：${sourcePalace.name}</p>`;
 
@@ -968,7 +1233,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 // Standard Logic
                                 displayTitle = `<strong>${sourceName}</strong> <strong>${type}入</strong> <strong>${targetName}</strong>`;
-                                interpretation = chart.getInterpretation(sourceName, type, targetName);
+                                
+                                // Check if Opposite Palace
+                                const sourceIdx = chart._getIndex(sourcePalace.name);
+                                const targetIdx = chart._getIndex(targetPalace.name);
+                                const isOpposite = (Math.abs(sourceIdx - targetIdx) === 6);
+
+                                if (isOpposite && (type === '祿' || type === '忌')) {
+                                    const data = ZIWEI_DATA_COLLISION[sourceName] || ZIWEI_DATA_COLLISION[sourceName + '宮'];
+                                    if (data && data[type]) {
+                                        interpretation = `<span style="color:#e65100; font-weight:bold;">【${type === '祿' ? '照' : '沖'}】對宮：</span>` + data[type].normal;
+                                    } else {
+                                        interpretation = chart.getInterpretation(sourceName, type, targetName);
+                                    }
+                                } else {
+                                    interpretation = chart.getInterpretation(sourceName, type, targetName);
+                                }
                             }
 
                             if (!interpretation) interpretation = '(暫無此象義)';
@@ -1190,6 +1470,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ].forEach(el => {
         el.addEventListener('change', render);
     });
+
+    if (ui.oppositeTransBtn) {
+        ui.oppositeTransBtn.addEventListener('click', () => {
+            showOppositeArrows = !showOppositeArrows;
+            const btn = ui.oppositeTransBtn;
+            if (showOppositeArrows) {
+                btn.style.backgroundColor = '#2c3e50';
+                btn.style.color = '#fff';
+                btn.textContent = '隱藏對宮飛化';
+            } else {
+                btn.style.backgroundColor = '';
+                btn.style.color = '';
+                btn.textContent = '對宮飛化';
+            }
+            render();
+        });
+    }
 
     ui.resetBtn.addEventListener('click', () => {
         ui.birthStem.value = '甲';
