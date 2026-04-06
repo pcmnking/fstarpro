@@ -208,7 +208,13 @@ class ZiWeiChart {
             this.palaces[targetBranch].addStar(star.name);
         });
 
-        // 5. Calculate Four Transformations (Birth Year)
+        // 5. Manual Star Placement (Must be before Four Transformations)
+        if (wenqu) this.palaces[wenqu].addStar('文曲');
+        if (wenchang) this.palaces[wenchang].addStar('文昌');
+        if (zuofu) this.palaces[zuofu].addStar('左輔');
+        if (youbi) this.palaces[youbi].addStar('右弼');
+
+        // 6. Calculate Four Transformations (Birth Year)
         let triggerStem = this.birthStem;
         let transStars = this.fourTransMap[triggerStem];
         if (transStars) {
@@ -221,12 +227,6 @@ class ZiWeiChart {
                 });
             });
         }
-
-        // 6. Manual Star Placement
-        if (wenqu) this.palaces[wenqu].addStar('文曲');
-        if (wenchang) this.palaces[wenchang].addStar('文昌');
-        if (zuofu) this.palaces[zuofu].addStar('左輔');
-        if (youbi) this.palaces[youbi].addStar('右弼');
     }
 
     getTransSummary() {
@@ -427,59 +427,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper to draw specific arrow path
     function drawArrowPath(svg, sourcePos, targetPos, typeClass, offsetIndex) {
-        // Calculate control points for curved arrow
+        // Calculate direct path
         const dx = targetPos.x - sourcePos.x;
         const dy = targetPos.y - sourcePos.y;
 
-        // Create a curved path
-        const curvature = 0.2;
-        const midX = (sourcePos.x + targetPos.x) / 2;
-        const midY = (sourcePos.y + targetPos.y) / 2;
-
-        // Perpendicular offset for curve
-        const offsetX = -dy * curvature;
-        const offsetY = dx * curvature;
-
-        // Add offset based on transformation index to prevent overlapping
-        const indexOffset = (offsetIndex - 1.5) * 15; // Spread arrows
-        const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
-        const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
-
-        const controlX = midX + finalOffsetX;
-        const controlY = midY + finalOffsetY;
-
         // Shorten the arrow to not overlap with palace borders
-        const shortenFactor = 0.85;
+        const shortenFactor = 0.9;
         const adjustedTargetX = sourcePos.x + dx * shortenFactor;
         const adjustedTargetY = sourcePos.y + dy * shortenFactor;
 
-        // Create path
+        // Create straight path
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const pathData = `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`;
+        const pathData = `M ${sourcePos.x} ${sourcePos.y} L ${adjustedTargetX} ${adjustedTargetY}`;
         path.setAttribute('d', pathData);
         path.setAttribute('class', `arrow-${typeClass}`);
-        path.setAttribute('stroke-dasharray', '5,3');
 
         // Set color based on class
-        const colors = {
-            'arrow-lu': '#d32f2f',
-            'arrow-quan': '#388e3c',
-            'arrow-ke': '#1976d2',
-            'arrow-ji': '#7b1fa2'
-        };
-        path.setAttribute('stroke', colors[`arrow-${typeClass}`] || colors[typeClass] || '#000'); // Handle both 'arrow-lu' and 'lu' passed
-        if (!colors[`arrow-${typeClass}`] && colors[typeClass]) {
-            // If just 'lu' passed, ensure correct class name or logic
-            path.setAttribute('stroke', colors[typeClass]);
-        }
-
-        // Simplified color lookup:
         const type = typeClass.replace('arrow-', '');
         const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
         path.setAttribute('stroke', colorMap[type]);
 
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-width', '3'); // Solid and thicker
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('marker-end', `url(#arrowhead-${type})`);
 
