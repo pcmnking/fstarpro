@@ -2233,6 +2233,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const palaceTitle = p.title || '未知宮位';
                 const celestial = p.celestial || '';
+
+                // Helper to get layered role for a branch
+                const getLayeredRole = (targetBranch) => {
+                    const targetP = chart.palaces[targetBranch];
+                    const roles = {
+                        benming: targetP.title.replace('宮', ''),
+                        dayun: '無',
+                        liunian: '無'
+                    };
+
+                    if (ui.dayunPos.value) {
+                        const dayunMingIdx = chart._getIndex(ui.dayunPos.value);
+                        const targetIdx = chart._getIndex(targetBranch);
+                        let offset = (dayunMingIdx - targetIdx) % 12;
+                        if (offset < 0) offset += 12;
+                        roles.dayun = chart.palaceNames[offset].replace('宮', '');
+                    }
+                    if (ui.liunianPos.value) {
+                        const liunianMingIdx = chart._getIndex(ui.liunianPos.value);
+                        const targetIdx = chart._getIndex(targetBranch);
+                        let offset = (liunianMingIdx - targetIdx) % 12;
+                        if (offset < 0) offset += 12;
+                        roles.liunian = chart.palaceNames[offset].replace('宮', '');
+                    }
+                    return roles;
+                };
+
+                const currentRoles = getLayeredRole(branch);
                 
                 // Get self-transformation
                 let zihua = [];
@@ -2256,77 +2284,63 @@ document.addEventListener('DOMContentLoaded', () => {
                     srcTransStars.forEach((star, idx) => {
                         if (p.stars && p.stars.includes(star)) {
                             const type = chart.transTypes[idx];
-                            const isLifePalace = srcPalace.title === '命宮';
-                            allIncomingTrans.push(`  - [${type}] ${star} 來自 ${srcPalace.title || srcBranch}${isLifePalace ? '(命宮)' : ''} [${srcStem}干]`);
+                            const srcRoles = getLayeredRole(srcBranch);
+                            const srcStackStr = `本命${srcRoles.benming} + 大限${srcRoles.dayun} + 流年${srcRoles.liunian}`;
+                            allIncomingTrans.push(`  - [${type}] ${star} 來自 [ ${srcStackStr} ] [${srcStem}干]`);
                         }
                     });
                 });
 
                 // Prepare Content for Copy
-                const instruction = "「這是一份紫微斗數的疊宮資料。請特別針對『宮位重疊』的狀態，結合本命、大限、流年的宮位象義，分析此宮位的吉凶與具體事件判斷。」";
+                const instruction = `【AI 解讀指令】\n這是一份紫微斗數命盤的宮位詳細資訊，包含「本命、大限、流年」的疊宮狀態以及「宮位飛化」的動態軌跡。請你扮演一位專業的紫微斗數老師，結合這些疊宮象義與飛星動能，為我深入診斷此宮位的吉凶象義、潛在事件以及建議。\n------------------------------------------------`;
                 
                 let content = instruction + `\n\n`;
-                content += `◎ 宮位重疊 (疊宮) 狀態：\n`;
-                
-                let stack = `[本命]${palaceTitle}`;
-                if (ui.dayunPos && ui.dayunPos.value) {
-                    const dayunBranch = ui.dayunPos.value.replace('宮', '');
-                    const dayunMingIdx = chart._getIndex(dayunBranch);
-                    const currentIdx = chart._getIndex(branch);
-                    if (dayunMingIdx !== -1 && currentIdx !== -1) {
-                        let offset = (dayunMingIdx - currentIdx) % 12;
-                        if (offset < 0) offset += 12;
-                        stack += ` + [大限]${chart.palaceNames[offset]}`;
-                    }
-                }
-                if (ui.liunianPos && ui.liunianPos.value) {
-                    const liunianBranch = ui.liunianPos.value.replace('宮', '');
-                    const liunianMingIdx = chart._getIndex(liunianBranch);
-                    const currentIdx = chart._getIndex(branch);
-                    if (liunianMingIdx !== -1 && currentIdx !== -1) {
-                        let offset = (liunianMingIdx - currentIdx) % 12;
-                        if (offset < 0) offset += 12;
-                        stack += ` + [流年]${chart.palaceNames[offset]}`;
-                    }
-                }
-                content += `${stack}\n`;
-                content += `------------------------------------------\n`;
-                
-                content += `◎ 宮位基本資訊：\n地支：${branch}宮\n宮干：${celestial}\n`;
-                
-                // Marking stars with transformations
-                const lifePalaceBranch = ui.mingPos.value;
-                const lifePalace = chart.palaces[lifePalaceBranch];
-                const lifeStem = lifePalace ? lifePalace.celestial : '';
-                const lifeTransStars = chart.fourTransMap[lifeStem] || [];
+                content += `◎ 宮位重疊 (疊宮) 資訊：\n`;
+                content += `【地支：${branch}宮 | 宮干：${celestial}】\n`;
+                content += `● 本命層級：${currentRoles.benming}\n`;
+                content += `● 大限層級：${currentRoles.dayun}\n`;
+                content += `● 流年層級：${currentRoles.liunian}\n\n`;
 
-                let markedStars = (p.stars || []).map(s => {
-                    let mark = '';
-                    const bTrans = (p.trans || []).find(t => t.star === s);
-                    if (bTrans) mark += `(生年${bTrans.type})`;
-                    
-                    const lifeStarIdx = lifeTransStars.indexOf(s);
-                    if (lifeStarIdx !== -1) mark += `(命宮飛${chart.transTypes[lifeStarIdx]})`;
-                    
-                    return s + mark;
-                }).join('、');
-                
-                content += `\n◎ 星曜組成：\n${markedStars}\n`;
-                
+                let starList = (p.stars || []).join('、');
+                content += `◎ 星曜組成：\n`;
+                content += `${starList}\n\n`;
+
                 const birthTrans = (p.trans || []).map(t => `${t.star}${t.type}`).join('、');
-                if (birthTrans) content += `\n◎ 先天基調 (生年四化)：\n${birthTrans}\n`;
-                if (zihua.length > 0) content += `\n◎ 變動現象 (自化)：\n${zihua.join('、')}\n`;
-                if (allIncomingTrans.length > 0) content += `\n◎ 氣數匯聚 (飛入資訊)：\n${allIncomingTrans.join('\n')}\n`;
+                if (birthTrans) content += `◎ 先天基調 (生年四化)：\n${birthTrans}\n\n`;
+                
+                // Get self-transformation list for display
+                let selfTransDisplay = [];
+                if (celestial && chart.fourTransMap[celestial]) {
+                    const selfTransStars = chart.fourTransMap[celestial];
+                    selfTransStars.forEach((star, idx) => {
+                        if (p.stars && p.stars.includes(star)) {
+                            selfTransDisplay.push(`自化${chart.transTypes[idx]}`);
+                        }
+                    });
+                }
+                if (selfTransDisplay.length > 0) content += `◎ 變動現象 (自化)：\n${selfTransDisplay.join('、')}\n\n`;
+                
+                if (allIncomingTrans.length > 0) {
+                    content += `◎ 氣數匯聚 (各宮飛入此宮之資訊)：\n`;
+                    content += `${allIncomingTrans.join('\n')}\n\n`;
+                }
                 
                 if (celestial && chart.fourTransMap[celestial]) {
                     const flyTrans = chart.fourTransMap[celestial];
-                    content += `\n◎ 四化飛伏 (宮干 ${celestial} 飛出)：\n`;
+                    content += `◎ 四化飛伏 (以此宮宮干 ${celestial} 飛出之資訊)：\n`;
                     flyTrans.forEach((star, idx) => {
                         const type = chart.transTypes[idx];
                         const targetPalace = Object.values(chart.palaces).find(tp => tp.stars && tp.stars.includes(star));
-                        const targetTitle = targetPalace ? targetPalace.title : '未知';
-                        content += `  - [${type}] ${star} ➜ ${targetTitle}\n`;
+                        if (targetPalace) {
+                            const targetBranch = Object.keys(chart.palaces).find(key => chart.palaces[key] === targetPalace);
+                            const targetRoles = getLayeredRole(targetBranch);
+                            const targetStackStr = `本命${targetRoles.benming} + 大限${targetRoles.dayun} + 流年${targetRoles.liunian}`;
+                            content += `  - [${type}] ${star} ➜ [ ${targetStackStr} ]\n`;
+                        } else {
+                            content += `  - [${type}] ${star} ➜ [ 未知 ]\n`;
+                        }
                     });
+                    content += `\n`;
                 }
 
                 // Show Modal with dedicated Textarea for easy copy
@@ -2337,9 +2351,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="modal-header">宮位詳情 - ${palaceTitle}</div>
                         <div class="modal-body">
                             <div style="background: #e3f2fd; padding: 10px; border-radius: 6px; border-left: 4px solid #1976d2; margin-bottom: 15px; font-size: 0.9em; color: #1565c0;">
-                                <strong>建議解讀指令：</strong><br>${instruction}
+                                <strong>建議解讀指令：</strong><br>${instruction.split('\n')[0]}...
                             </div>
-                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">內容已包含上述指令，點擊一鍵複製後即可直接貼給 Gemini：</div>
+                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">內容已包含完整指令，點擊一鍵複製後即可直接貼給 Gemini：</div>
                             <textarea id="copyTargetText" style="width: 100%; height: 260px; padding: 12px; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; background: #fdfdfd; resize: none; line-height: 1.5;" readonly>${content}</textarea>
                         </div>
                         <div class="modal-footer">
