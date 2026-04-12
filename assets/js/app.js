@@ -2350,9 +2350,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="modal-content">
                         <div class="modal-header">宮位詳情 - ${palaceTitle}</div>
                         <div class="modal-body">
-                            <div style="background: #e3f2fd; padding: 10px; border-radius: 6px; border-left: 4px solid #1976d2; margin-bottom: 15px; font-size: 0.9em; color: #1565c0;">
-                                <strong>建議解讀指令：</strong><br>${instruction.split('\n')[0]}...
-                            </div>
                             <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">內容已包含完整指令，點擊一鍵複製後即可直接貼給 Gemini：</div>
                             <textarea id="copyTargetText" style="width: 100%; height: 260px; padding: 12px; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; background: #fdfdfd; resize: none; line-height: 1.5;" readonly>${content}</textarea>
                         </div>
