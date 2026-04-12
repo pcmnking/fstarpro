@@ -817,6 +817,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get matching palace names for highlighting
         const matchingPalaces = getMatchingPalaceNames();
 
+        const lifePalaceBranch = ui.mingPos.value;
+        const lifePalace = chart.palaces[lifePalaceBranch];
+
         // Render Grid
         let html = '<div class="chart-grid">';
         let layoutOrder = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
@@ -826,16 +829,29 @@ document.addEventListener('DOMContentLoaded', () => {
             let classes = ['palace', b];
             if (p.isMing) classes.push('is-ming');
 
-            let starsHtml = p.stars.map(s => `<div class="star">${s}</div>`).join('');
+            const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+
+            // Find Life Palace stem for permanent square icons
+            const lifeStem = lifePalace ? lifePalace.celestial : '';
+            const lifeTransStars = chart.fourTransMap[lifeStem] || [];
+
+            let starsHtml = p.stars.map(s => {
+                let icons = '';
+                // 1. Birth Year (Circle)
+                const bTrans = p.trans.find(t => t.star === s);
+                if (bTrans) {
+                    icons += `<span class="trans-circle-mini bg-${typeMap[bTrans.type]}" title="生年${bTrans.type}">${bTrans.type}</span>`;
+                }
+                // 2. Life Palace (Square)
+                const lifeStarIdx = lifeTransStars.indexOf(s);
+                if (lifeStarIdx !== -1) {
+                    const lType = chart.transTypes[lifeStarIdx];
+                    icons += `<span class="trans-square-mini bg-${typeMap[lType]}" title="命宮${lType}">${lType}</span>`;
+                }
+                return `<div class="star">${s}${icons}</div>`;
+            }).join('');
 
             let transHtml = '';
-
-            // 1. Birth Year Trans
-            if (p.trans.length > 0) {
-                const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
-                let tStr = p.trans.map(t => `<span class="birth-trans-item"><span class="trans-circle bg-${typeMap[t.type]}">${t.type}</span>${t.star}</span>`).join(' ');
-                transHtml += `<div class="birth-trans-container" style="margin-bottom: 5px;">${tStr}</div>`;
-            }
 
             // --- Detect Self-Transformation (自化) ---
             const currentStem = p.celestial;
@@ -855,32 +871,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             if (zihuaHtml) {
-                transHtml += `<div class="zihua-container">${zihuaHtml}</div>`;
+                transHtml += `<div class="zihua-container" style="position:absolute; bottom:5px; left:5px; text-align:left; pointer-events:auto; display:flex; flex-direction:column; gap:2px;">${zihuaHtml}</div>`;
             }
 
-            // 2. Permanent Life Palace Trans (Square)
-            const lifePalaceBranch = ui.mingPos.value;
-            const lifePalace = chart.palaces[lifePalaceBranch];
-            if (lifePalace) {
-                const lifeStem = lifePalace.celestial;
-                const lifeTransStars = chart.fourTransMap[lifeStem];
-                if (lifeTransStars) {
-                    p.stars.forEach(star => {
-                        const starIdx = lifeTransStars.indexOf(star);
-                        if (starIdx !== -1) {
-                            const type = chart.transTypes[starIdx];
-                            const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
-                            const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
-                            const color = transColors[type];
-
-                            transHtml += `<div class="trans life-trans" style="color: ${color}; font-weight: bold; margin-top: 4px; display: flex; align-items: center;">
-                                <span class="trans-square bg-${typeMap[type]}">${type}</span>
-                                [命宮${lifeStem}干${type}] ${star}
-                            </div>`;
-                        }
-                    });
-                }
-            }
 
             // 3. Active Highlight Trans (Based on Stem) - Circles
             activeSourceBranches.forEach(activeSourceBranch => {
@@ -1964,6 +1957,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         .liunian-title { position: absolute; top: 5px; left: 5px; font-size: 10px; color: #388e3c; font-weight: bold; }
                         .trans-circle { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; color: white; font-size: 10px; font-weight: bold; margin-right: 2px; }
                         .trans-square { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 2px; color: white; font-size: 10px; font-weight: bold; margin-right: 2px; }
+                        .trans-circle-mini, .trans-square-mini { display: inline-flex; align-items: center; justify-content: center; width: 10px; height: 10px; color: white; font-weight: bold; font-size: 7px; margin-left: 2px; vertical-align: middle; }
+                        .trans-circle-mini { border-radius: 50%; } .trans-square-mini { border-radius: 2px; }
                         .bg-lu { background-color: #d32f2f; } .bg-quan { background-color: #388e3c; } .bg-ke { background-color: #1976d2; } .bg-ji { background-color: #7b1fa2; }
                         .birth-trans-container { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 3px; }
                         .active-trans { display: flex; align-items: center; justify-content: center; margin-top: 2px; font-size: 10px; }
@@ -1973,18 +1968,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Generate chart HTML
                     function generateChartHTML() {
+                        const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
                         const layoutOrder = ['巳', '午', '未', '申', '辰', '酉', '卯', '戌', '寅', '丑', '子', '亥'];
                         let chartHTML = '<div class="chart-grid">';
                         layoutOrder.forEach(b => {
                             const p = chart.palaces[b];
                             const classes = ['palace', b];
                             if (p.isMing) classes.push('is-ming');
-                             const starsHtml = p.stars.map(s => '<div class="star">' + s + '</div>').join('');
+                             const starsHtml = p.stars.map(s => {
+                                 let icons = '';
+                                 const bTrans = p.trans.find(t => t.star === s);
+                                 if (bTrans) {
+                                     icons += `<span class="trans-circle-mini bg-${typeMap[bTrans.type]}" style="width:10px;height:10px;font-size:7px;margin-left:2px;">${bTrans.type}</span>`;
+                                 }
+                                 const lifePalaceBranch = ui.mingPos.value;
+                                 const lifePalace = chart.palaces[lifePalaceBranch];
+                                 const lifeStem = lifePalace ? lifePalace.celestial : '';
+                                 const lifeTransStars = chart.fourTransMap[lifeStem] || [];
+                                 const lifeStarIdx = lifeTransStars.indexOf(s);
+                                 if (lifeStarIdx !== -1) {
+                                     const lType = chart.transTypes[lifeStarIdx];
+                                     icons += `<span class="trans-square-mini bg-${typeMap[lType]}" style="width:10px;height:10px;font-size:7px;margin-left:2px;">${lType}</span>`;
+                                 }
+                                 return '<div class="star">' + s + icons + '</div>';
+                             }).join('');
                              let transHtml = '';
-                             if (p.trans.length > 0) {
-                                 const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
-                                 const tStr = p.trans.map(t => `<span class="active-trans"><span class="trans-circle bg-${typeMap[t.type]}">${t.type}</span>${t.star}</span>`).join('');
-                                 transHtml = '<div class="birth-trans-container">' + tStr + '</div>';
+                             // --- PDF Self-Transformation (自化) ---
+                             let zihuaHtml = '';
+                             const currentStem = p.celestial;
+                             const selfTransStars = chart.fourTransMap[currentStem];
+                             if (selfTransStars) {
+                                 selfTransStars.forEach((star, idx) => {
+                                     const type = chart.transTypes[idx];
+                                     if (p.stars.includes(star)) {
+                                         const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                                         const color = colors[type];
+                                         zihuaHtml += `<div style="color: ${color}; border: 1px solid ${color}; padding: 0px 2px; border-radius: 2px; font-size: 7px; display: inline-block; margin-right: 2px; background:white; white-space:nowrap;">自化${type}</div>`;
+                                     }
+                                 });
+                             }
+                             if (zihuaHtml) {
+                                 transHtml += `<div style="position:absolute; bottom:5px; left:5px; text-align:left; display:flex; flex-direction:column; gap:1px;">${zihuaHtml}</div>`;
                              }
                             let extraHtml = '';
                             if (ui.dayunPos.value) {
@@ -2207,8 +2231,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const palaceTitle = p.title || '未知宮位';
                 const celestial = p.celestial || '';
-                const stars = (p.stars || []).join('、');
-                const trans = (p.trans || []).map(t => `${t.star}${t.type}`).join('、');
                 
                 // Get self-transformation
                 let zihua = [];
@@ -2237,10 +2259,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 });
+
+                // Prepare Content for Copy
+                const instruction = "「這是一份紫微斗數的疊宮資料。請特別針對『宮位重疊』的狀態，結合本命、大限、流年的宮位象義，分析此宮位的吉凶與具體事件判斷。」";
                 
-                let content = `◎ 宮位基本資訊：\n【${palaceTitle}】\n地支：${branch}宮\n宮干：${celestial}\n`;
+                let content = instruction + `\n\n`;
+                content += `◎ 宮位重疊 (疊宮) 狀態：\n`;
                 
-                // Decade & Yearly Palace Names
+                let stack = `[本命]${palaceTitle}`;
                 if (ui.dayunPos && ui.dayunPos.value) {
                     const dayunBranch = ui.dayunPos.value.replace('宮', '');
                     const dayunMingIdx = chart._getIndex(dayunBranch);
@@ -2248,7 +2274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (dayunMingIdx !== -1 && currentIdx !== -1) {
                         let offset = (dayunMingIdx - currentIdx) % 12;
                         if (offset < 0) offset += 12;
-                        content += `大限：${chart.palaceNames[offset]}\n`;
+                        stack += ` + [大限]${chart.palaceNames[offset]}`;
                     }
                 }
                 if (ui.liunianPos && ui.liunianPos.value) {
@@ -2258,12 +2284,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (liunianMingIdx !== -1 && currentIdx !== -1) {
                         let offset = (liunianMingIdx - currentIdx) % 12;
                         if (offset < 0) offset += 12;
-                        content += `流年：${chart.palaceNames[offset]}\n`;
+                        stack += ` + [流年]${chart.palaceNames[offset]}`;
                     }
                 }
+                content += `${stack}\n`;
+                content += `------------------------------------------\n`;
                 
-                content += `\n◎ 星曜組成：\n${stars}\n`;
-                if (trans) content += `\n◎ 先天基調 (生年四化)：\n${trans}\n`;
+                content += `◎ 宮位基本資訊：\n地支：${branch}宮\n宮干：${celestial}\n`;
+                
+                // Marking stars with transformations
+                const lifePalaceBranch = ui.mingPos.value;
+                const lifePalace = chart.palaces[lifePalaceBranch];
+                const lifeStem = lifePalace ? lifePalace.celestial : '';
+                const lifeTransStars = chart.fourTransMap[lifeStem] || [];
+
+                let markedStars = (p.stars || []).map(s => {
+                    let mark = '';
+                    const bTrans = (p.trans || []).find(t => t.star === s);
+                    if (bTrans) mark += `(生年${bTrans.type})`;
+                    
+                    const lifeStarIdx = lifeTransStars.indexOf(s);
+                    if (lifeStarIdx !== -1) mark += `(命宮飛${chart.transTypes[lifeStarIdx]})`;
+                    
+                    return s + mark;
+                }).join('、');
+                
+                content += `\n◎ 星曜組成：\n${markedStars}\n`;
+                
+                const birthTrans = (p.trans || []).map(t => `${t.star}${t.type}`).join('、');
+                if (birthTrans) content += `\n◎ 先天基調 (生年四化)：\n${birthTrans}\n`;
                 if (zihua.length > 0) content += `\n◎ 變動現象 (自化)：\n${zihua.join('、')}\n`;
                 if (allIncomingTrans.length > 0) content += `\n◎ 氣數匯聚 (飛入資訊)：\n${allIncomingTrans.join('\n')}\n`;
                 
@@ -2285,8 +2334,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="modal-content">
                         <div class="modal-header">宮位詳情 - ${palaceTitle}</div>
                         <div class="modal-body">
-                            <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">點擊下方按鈕複製，或手動選取方塊內文字：</div>
-                            <textarea id="copyTargetText" style="width: 100%; height: 200px; padding: 10px; font-family: monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; resize: none;" readonly>${content}</textarea>
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 6px; border-left: 4px solid #1976d2; margin-bottom: 15px; font-size: 0.9em; color: #1565c0;">
+                                <strong>建議解讀指令：</strong><br>${instruction}
+                            </div>
+                            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">內容已包含上述指令，點擊一鍵複製後即可直接貼給 Gemini：</div>
+                            <textarea id="copyTargetText" style="width: 100%; height: 260px; padding: 12px; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; background: #fdfdfd; resize: none; line-height: 1.5;" readonly>${content}</textarea>
                         </div>
                         <div class="modal-footer">
                             <button class="modal-btn secondary close-modal">關閉</button>
