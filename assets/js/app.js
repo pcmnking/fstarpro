@@ -442,17 +442,38 @@ document.addEventListener('DOMContentLoaded', () => {
         path.setAttribute('d', pathData);
         path.setAttribute('class', `arrow-${typeClass}`);
 
-        // Set color based on class
         const type = typeClass.replace('arrow-', '');
         const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
         path.setAttribute('stroke', colorMap[type]);
-
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-width', '3'); // Solid and thicker
+        path.setAttribute('stroke-width', '3');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('marker-end', `url(#arrowhead-${type})`);
-
         svg.appendChild(path);
+
+        // Add text label
+        const midX = (sourcePos.x + adjustedTargetX) / 2;
+        const midY = (sourcePos.y + adjustedTargetY) / 2;
+        const label = type === 'lu' ? '祿' : (type === 'quan' ? '權' : (type === 'ke' ? '科' : '忌'));
+        
+        // Background for text to make it readable
+        const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        textBg.setAttribute('cx', midX);
+        textBg.setAttribute('cy', midY);
+        textBg.setAttribute('r', '10');
+        textBg.setAttribute('fill', 'white');
+        textBg.setAttribute('fill-opacity', '0.8');
+        svg.appendChild(textBg);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', midY);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('class', 'arrow-text-label');
+        text.setAttribute('fill', colorMap[type]);
+        text.textContent = label;
+        svg.appendChild(text);
     }
 
     // Helper to draw solid arrow path for Opposite Palace Flying
@@ -473,11 +494,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
         path.setAttribute('stroke', colorMap[type]);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-width', '4'); // Even thicker to be prominent
+        path.setAttribute('stroke-width', '4');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('marker-end', `url(#arrowhead-${type})`);
-
         svg.appendChild(path);
+
+        // Add text label
+        const midX = (sourcePos.x + adjustedTargetX) / 2;
+        const midY = (sourcePos.y + adjustedTargetY) / 2;
+        const label = type === 'lu' ? '祿' : (type === 'quan' ? '權' : (type === 'ke' ? '科' : '忌'));
+        
+        const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        textBg.setAttribute('cx', midX);
+        textBg.setAttribute('cy', midY);
+        textBg.setAttribute('r', '10');
+        textBg.setAttribute('fill', 'white');
+        textBg.setAttribute('fill-opacity', '0.9');
+        svg.appendChild(textBg);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', midX);
+        text.setAttribute('y', midY);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('class', 'arrow-text-label');
+        text.setAttribute('fill', colorMap[type]);
+        text.textContent = label;
+        svg.appendChild(text);
     }
 
     // Helper function to draw transformation arrows
@@ -785,13 +828,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let starsHtml = p.stars.map(s => `<div class="star">${s}</div>`).join('');
 
-
-            // Trans display
             let transHtml = '';
+
             // 1. Birth Year Trans
             if (p.trans.length > 0) {
-                let tStr = p.trans.map(t => `<span class="birth-trans">生年${t.type}・${t.star}</span>`).join(' ');
-                transHtml += `<div class="trans" style="margin-bottom: 5px;">${tStr}</div>`;
+                const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+                let tStr = p.trans.map(t => `<span class="birth-trans-item"><span class="trans-circle bg-${typeMap[t.type]}">${t.type}</span>${t.star}</span>`).join(' ');
+                transHtml += `<div class="birth-trans-container" style="margin-bottom: 5px;">${tStr}</div>`;
             }
 
             // --- Detect Self-Transformation (自化) ---
@@ -815,9 +858,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 transHtml += `<div class="zihua-container">${zihuaHtml}</div>`;
             }
 
-            // 2. Active Highlight Trans (Based on Stem)
+            // 2. Permanent Life Palace Trans (Square)
+            const lifePalaceBranch = ui.mingPos.value;
+            const lifePalace = chart.palaces[lifePalaceBranch];
+            if (lifePalace) {
+                const lifeStem = lifePalace.celestial;
+                const lifeTransStars = chart.fourTransMap[lifeStem];
+                if (lifeTransStars) {
+                    p.stars.forEach(star => {
+                        const starIdx = lifeTransStars.indexOf(star);
+                        if (starIdx !== -1) {
+                            const type = chart.transTypes[starIdx];
+                            const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+                            const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                            const color = transColors[type];
+
+                            transHtml += `<div class="trans life-trans" style="color: ${color}; font-weight: bold; margin-top: 4px; display: flex; align-items: center;">
+                                <span class="trans-square bg-${typeMap[type]}">${type}</span>
+                                [命宮${lifeStem}干${type}] ${star}
+                            </div>`;
+                        }
+                    });
+                }
+            }
+
+            // 3. Active Highlight Trans (Based on Stem) - Circles
             activeSourceBranches.forEach(activeSourceBranch => {
-                const activeStem = chart.palaces[activeSourceBranch].celestial;
+                // Skip if it's Life Palace (handled above as square)
+                if (activeSourceBranch === lifePalaceBranch) return;
+
+                const activePalace = chart.palaces[activeSourceBranch];
+                const activeStem = activePalace.celestial;
 
                 const activeTransStars = chart.fourTransMap[activeStem];
                 if (activeTransStars) {
@@ -825,16 +896,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         const starIdx = activeTransStars.indexOf(star);
                         if (starIdx !== -1) {
                             const type = chart.transTypes[starIdx];
+                            const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+                            const transColors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                            const color = transColors[type];
 
-                            const transColors = {
-                                '祿': '#d32f2f',
-                                '權': '#388e3c',
-                                '科': '#1976d2',
-                                '忌': '#7b1fa2'
-                            };
-                            const color = transColors[type] || 'blue';
-
-                            transHtml += `<div class="trans active-trans" style="color: ${color}; font-weight: bold; border: 1px solid ${color}; margin-top: 2px;">[${activeStem}干${type}]</div>`;
+                            transHtml += `<div class="trans active-trans" style="color: ${color}; font-weight: bold; margin-top: 4px; display: flex; align-items: center;">
+                                <span class="trans-circle bg-${typeMap[type]}">${type}</span>
+                                [${activeStem}干${type}] ${star}
+                            </div>`;
                         }
                     });
                 }
@@ -1893,6 +1962,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         .center-info { grid-column: 2 / 4; grid-row: 2 / 4; background-color: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-align: center; color: #333; font-weight: bold; }
                         .dayun-title { position: absolute; top: 5px; right: 5px; font-size: 10px; color: #1976d2; font-weight: bold; }
                         .liunian-title { position: absolute; top: 5px; left: 5px; font-size: 10px; color: #388e3c; font-weight: bold; }
+                        .trans-circle { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; color: white; font-size: 10px; font-weight: bold; margin-right: 2px; }
+                        .trans-square { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 2px; color: white; font-size: 10px; font-weight: bold; margin-right: 2px; }
+                        .bg-lu { background-color: #d32f2f; } .bg-quan { background-color: #388e3c; } .bg-ke { background-color: #1976d2; } .bg-ji { background-color: #7b1fa2; }
+                        .birth-trans-container { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 3px; }
+                        .active-trans { display: flex; align-items: center; justify-content: center; margin-top: 2px; font-size: 10px; }
                         pre { white-space: pre-wrap; word-wrap: break-word; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 14px; line-height: 1.6; padding: 20px; }
                         @media print { .no-print { display: none; } }
                     </style></head><body>`;
@@ -1905,12 +1979,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const p = chart.palaces[b];
                             const classes = ['palace', b];
                             if (p.isMing) classes.push('is-ming');
-                            const starsHtml = p.stars.map(s => '<div class="star">' + s + '</div>').join('');
-                            let transHtml = '';
-                            if (p.trans.length > 0) {
-                                const tStr = p.trans.map(t => t.star + t.type).join(' ');
-                                transHtml = '<div class="trans">' + tStr + '</div>';
-                            }
+                             const starsHtml = p.stars.map(s => '<div class="star">' + s + '</div>').join('');
+                             let transHtml = '';
+                             if (p.trans.length > 0) {
+                                 const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+                                 const tStr = p.trans.map(t => `<span class="active-trans"><span class="trans-circle bg-${typeMap[t.type]}">${t.type}</span>${t.star}</span>`).join('');
+                                 transHtml = '<div class="birth-trans-container">' + tStr + '</div>';
+                             }
                             let extraHtml = '';
                             if (ui.dayunPos.value) {
                                 const mingIdx = chart._getIndex(ui.dayunPos.value);
@@ -2116,6 +2191,156 @@ document.addEventListener('DOMContentLoaded', () => {
                 midPanel.innerHTML = html;
             } else if (midPanel) {
                 midPanel.innerHTML = `<h3>【${palaceName}】</h3><p style="text-align:center;">暫無此宮位詳細資料。</p>`;
+            }
+        }
+
+        // Handle Earthly Branch (name) Click for Copying Content
+        if (e.target.classList.contains('name')) {
+            try {
+                // Sanitize branch name: remove '宮' to match '子', '丑' etc.
+                const branch = e.target.innerText.trim().replace('宮', '');
+                const p = chart.palaces[branch];
+                if (!p) {
+                    console.error('Palace not found for branch:', branch);
+                    return;
+                }
+
+                const palaceTitle = p.title || '未知宮位';
+                const celestial = p.celestial || '';
+                const stars = (p.stars || []).join('、');
+                const trans = (p.trans || []).map(t => `${t.star}${t.type}`).join('、');
+                
+                // Get self-transformation
+                let zihua = [];
+                if (celestial && chart.fourTransMap[celestial]) {
+                    const selfTransStars = chart.fourTransMap[celestial];
+                    selfTransStars.forEach((star, idx) => {
+                        if (p.stars && p.stars.includes(star)) {
+                            zihua.push(`自化${chart.transTypes[idx]}`);
+                        }
+                    });
+                }
+
+                // Get ALL incoming flying stars
+                let allIncomingTrans = [];
+                Object.entries(chart.palaces).forEach(([srcBranch, srcPalace]) => {
+                    if (!srcPalace) return;
+                    const srcStem = srcPalace.celestial;
+                    if (!srcStem || !chart.fourTransMap[srcStem]) return;
+                    
+                    const srcTransStars = chart.fourTransMap[srcStem];
+                    srcTransStars.forEach((star, idx) => {
+                        if (p.stars && p.stars.includes(star)) {
+                            const type = chart.transTypes[idx];
+                            const isLifePalace = srcPalace.title === '命宮';
+                            allIncomingTrans.push(`  - [${type}] ${star} 來自 ${srcPalace.title || srcBranch}${isLifePalace ? '(命宮)' : ''} [${srcStem}干]`);
+                        }
+                    });
+                });
+                
+                let content = `◎ 宮位基本資訊：\n【${palaceTitle}】\n地支：${branch}宮\n宮干：${celestial}\n`;
+                
+                // Decade & Yearly Palace Names
+                if (ui.dayunPos && ui.dayunPos.value) {
+                    const dayunBranch = ui.dayunPos.value.replace('宮', '');
+                    const dayunMingIdx = chart._getIndex(dayunBranch);
+                    const currentIdx = chart._getIndex(branch);
+                    if (dayunMingIdx !== -1 && currentIdx !== -1) {
+                        let offset = (dayunMingIdx - currentIdx) % 12;
+                        if (offset < 0) offset += 12;
+                        content += `大限：${chart.palaceNames[offset]}\n`;
+                    }
+                }
+                if (ui.liunianPos && ui.liunianPos.value) {
+                    const liunianBranch = ui.liunianPos.value.replace('宮', '');
+                    const liunianMingIdx = chart._getIndex(liunianBranch);
+                    const currentIdx = chart._getIndex(branch);
+                    if (liunianMingIdx !== -1 && currentIdx !== -1) {
+                        let offset = (liunianMingIdx - currentIdx) % 12;
+                        if (offset < 0) offset += 12;
+                        content += `流年：${chart.palaceNames[offset]}\n`;
+                    }
+                }
+                
+                content += `\n◎ 星曜組成：\n${stars}\n`;
+                if (trans) content += `\n◎ 先天基調 (生年四化)：\n${trans}\n`;
+                if (zihua.length > 0) content += `\n◎ 變動現象 (自化)：\n${zihua.join('、')}\n`;
+                if (allIncomingTrans.length > 0) content += `\n◎ 氣數匯聚 (飛入資訊)：\n${allIncomingTrans.join('\n')}\n`;
+                
+                if (celestial && chart.fourTransMap[celestial]) {
+                    const flyTrans = chart.fourTransMap[celestial];
+                    content += `\n◎ 四化飛伏 (宮干 ${celestial} 飛出)：\n`;
+                    flyTrans.forEach((star, idx) => {
+                        const type = chart.transTypes[idx];
+                        const targetPalace = Object.values(chart.palaces).find(tp => tp.stars && tp.stars.includes(star));
+                        const targetTitle = targetPalace ? targetPalace.title : '未知';
+                        content += `  - [${type}] ${star} ➜ ${targetTitle}\n`;
+                    });
+                }
+
+                // Show Modal with dedicated Textarea for easy copy
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">宮位詳情 - ${palaceTitle}</div>
+                        <div class="modal-body">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">點擊下方按鈕複製，或手動選取方塊內文字：</div>
+                            <textarea id="copyTargetText" style="width: 100%; height: 200px; padding: 10px; font-family: monospace; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; resize: none;" readonly>${content}</textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="modal-btn secondary close-modal">關閉</button>
+                            <button class="modal-btn primary copy-modal-content">一鍵複製</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                const textarea = modal.querySelector('#copyTargetText');
+                textarea.onclick = function() { this.select(); };
+
+                modal.querySelector('.close-modal').onclick = () => modal.remove();
+                modal.onclick = (ev) => { if (ev.target === modal) modal.remove(); };
+                
+                modal.querySelector('.copy-modal-content').onclick = function() {
+                    const btn = this;
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999);
+                    
+                    let success = false;
+                    try {
+                        success = document.execCommand('copy');
+                    } catch (err) {
+                        console.error('execCommand Error:', err);
+                    }
+
+                    if (!success && navigator.clipboard) {
+                        navigator.clipboard.writeText(textarea.value).then(() => {
+                            updateStatus(btn);
+                        }).catch(err => {
+                            console.error('Clipboard API Error:', err);
+                            // Last resort
+                            window.prompt("按 Ctrl+C 複製下方的文字：", textarea.value);
+                        });
+                    } else if (success) {
+                        updateStatus(btn);
+                    } else {
+                        window.prompt("複製失敗，請手動複製下方文字：", textarea.value);
+                    }
+                };
+
+                function updateStatus(btn) {
+                    const oldText = btn.textContent;
+                    btn.textContent = '✓ 已複製';
+                    btn.style.backgroundColor = '#4caf50';
+                    setTimeout(() => {
+                        btn.textContent = oldText;
+                        btn.style.backgroundColor = '';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Palace Click Error:', err);
+                alert('開啟詳細資料時發生錯誤：' + err.message);
             }
         }
     });

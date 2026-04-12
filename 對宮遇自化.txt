@@ -1,0 +1,17 @@
+Listed directory fstarpro
+Ran command: `git status`
+Ran command: `git add . && git commit -m "Update ziwei collision analysis with detailed interpretations and UI improvements" && git push`
+Viewed index.html:1-119
+
+我已經將所有更新（包括完整的專業象義資料庫、優化後的碰撞邏輯、以及不遮擋連線的 UI 界面） **全部同步並推送 (Push)** 到您的 GitHub 倉庫了。
+
+### 🚀 網站更新摘要：
+1.  **資料庫完備**：已將您提供的 12 宮位「對宮飛入遇自化」的精密論斷文字（祿見錄/忌、忌見錄/忌）完整植入 `collision_data.js`。
+2.  **邏輯精準化**：新增了宮位名稱自動識別（例如「事業宮」與「官祿宮」的同步），確保觸發解析時 100% 匹配。
+3.  **UI 體驗升級**：
+    *   **中間區域淨空**：點擊自化標籤時，中間畫布不再顯示文字，確保您可以清晰觀察飛化箭頭與實線。
+    *   **右側詳盡報告**：所有解析直接呈現在右側面板，聚焦於論斷文字本身。
+    *   **移除冗餘資訊**：去掉了繁雜的能量列表，僅保留最核心的「碰撞專屬象義」。
+4.  **原始碼託管**：已執行 `git push`，如果您的網站有與 GitHub 連動（如 GitHub Pages 或 Vercel），更新現在應該已經生效。
+
+**現在您可以重新整理您的線上版網站，測試「夫妻宮」或其他宮位的碰撞效果！**

@@ -220,6 +220,168 @@ body {
     color: #333;
 }
 
+/* New styles for Birth Year and Life Palace transformations */
+.trans-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-right: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+.trans-square {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    color: white;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-right: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+/* Colors for transformations with modern gradients */
+.bg-lu { background: linear-gradient(135deg, #e53935, #b71c1c); }
+.bg-quan { background: linear-gradient(135deg, #43a047, #1b5e20); }
+.bg-ke { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
+.bg-ji { background: linear-gradient(135deg, #8e24aa, #4a148c); }
+
+.birth-trans-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.birth-trans-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85em;
+    color: #444;
+}
+
+/* Modal Popup Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.modal-header {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+    color: #2c3e50;
+}
+
+.modal-body {
+    margin-bottom: 25px;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-line;
+    font-size: 1.1em;
+    line-height: 1.6;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    color: #333;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    border: none;
+}
+
+.modal-btn.primary {
+    background-color: #1976d2;
+    color: white;
+}
+
+.modal-btn.primary:hover {
+    background-color: #1565c0;
+}
+
+.modal-btn.secondary {
+    background-color: #eee;
+    color: #555;
+}
+
+.modal-btn.secondary:hover {
+    background-color: #e0e0e0;
+}
+
+/* Arrow labels in SVG */
+.arrow-text-label {
+    font-size: 12px;
+    font-weight: bold;
+    fill: #333;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+.arrow-text-bg {
+    fill: white;
+    opacity: 0.8;
+}
+
+/* Earthly Branch name clickability */
+.palace .name {
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-decoration: underline dotted;
+    color: #666;
+}
+
+.palace .name:hover {
+    background-color: #eee;
+    color: #000;
+}
+
 .center-info .analysis-item {
     border-bottom: none;
     padding-bottom: 0;
@@ -446,4 +608,131 @@ body {
     border-top: 1px solid #ffe58f;
     font-size: 0.95em;
     color: #333;
+}
+
+/* --- New Visualization Styles --- */
+.trans-circle, .trans-square {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    margin-right: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.trans-circle { border-radius: 50%; }
+.trans-square { border-radius: 3px; }
+
+.bg-lu { background: linear-gradient(135deg, #e53935, #b71c1c); }
+.bg-quan { background: linear-gradient(135deg, #43a047, #1b5e20); }
+.bg-ke { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
+.bg-ji { background: linear-gradient(135deg, #8e24aa, #4a148c); }
+
+.birth-trans-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.birth-trans-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #444;
+}
+
+.arrow-text-label {
+    font-size: 14px;
+    font-weight: bold;
+    fill: #333;
+    pointer-events: none;
+}
+
+/* Modal Popup System */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    background: #455a64;
+    color: white;
+    padding: 15px 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: 'Microsoft JhengHei', 'Consolas', monospace;
+    line-height: 1.6;
+    color: #333;
+    background: #fdfdfd;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    background: #f5f5f5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #eee;
+}
+
+.modal-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.modal-btn.primary { background: #1976d2; color: white; }
+.modal-btn.secondary { background: #e0e0e0; color: #666; }
+.modal-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.palace .name {
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: underline dotted;
+}
+
+.palace .name:hover {
+    color: #1976d2;
+    background: rgba(25, 118, 210, 0.1);
+    border-radius: 2px;
 }
