@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let svg = arrowContainer.querySelector('svg');
         if (!svg) {
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('viewBox', '0 0 600 600');
+            svg.setAttribute('viewBox', '0 0 600 880');
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '100%');
             svg.style.position = 'absolute';
@@ -658,8 +658,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reuse logic by checking if SVG exists, if not create it.
         let svg = arrowContainer.querySelector('svg');
         if (!svg) {
-            // Basic SVG setup if not already created
+            // Basic SVG setup if not already created - ensure correct viewBox
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 600 880');
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '100%');
             svg.style.position = 'absolute';
@@ -848,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lType = chart.transTypes[lifeStarIdx];
                     icons += `<span class="trans-square-mini bg-${typeMap[lType]}" title="命宮${lType}">${lType}</span>`;
                 }
-                return `<div class="star">${s}${icons}</div>`;
+                return `<div class="star" data-star="${s}">${s}${icons}</div>`;
             }).join('');
 
             let transHtml = '';
@@ -865,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (p.stars.includes(star)) {
                         const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
                         const color = colors[type];
-                        zihuaHtml += `<div class="zihua-label" data-type="${type}" data-star="${star}" style="color: ${color}; border: 1px solid ${color}; padding: 1px 3px; border-radius: 3px; font-size: 0.8em; margin-top: 2px; cursor: pointer; display: inline-block; margin-right: 2px;">自化${type}</div>`;
+                        zihuaHtml += `<div class="zihua-label" data-type="${type}" data-star="${star}" style="color: ${color}; border: 1px solid ${color}; padding: 2px 4px; border-radius: 4px; font-size: 1em; margin-top: 2px; cursor: pointer; display: inline-block; margin-right: 2px; font-weight: bold;">自化${type}</div>`;
                         zihuaInfo.push({ type, star });
                     }
                 });
@@ -933,7 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Determine palace title background color
-            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor:pointer;';
+            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor:pointer; font-size: 1.1em;';
 
             // Add background color if this palace title matches
             if (matchingPalaces.dayun.has(p.title) || matchingPalaces.liunian.has(p.title)) {
@@ -2088,8 +2089,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Handle Star Click (New)
-        if (e.target.classList.contains('star')) {
-            const starName = e.target.innerText.trim();
+        const starEl = e.target.closest('.star');
+        if (starEl) {
+            const starName = starEl.dataset.star;
 
             // Toggle arrow visualization
             if (activeTargetStars.has(starName)) {
