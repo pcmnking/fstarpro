@@ -936,20 +936,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Determine palace title background color
             let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor:pointer; font-size: 1.1em;';
 
-            // Add background color if this palace title matches
-            if (matchingPalaces.dayun.has(p.title) || matchingPalaces.liunian.has(p.title)) {
-                let bgColors = [];
-                if (matchingPalaces.dayun.has(p.title)) {
-                    bgColors.push('rgba(25, 118, 210, 0.2)');
-                }
-                if (matchingPalaces.liunian.has(p.title)) {
-                    bgColors.push('rgba(56, 142, 60, 0.2)');
-                }
-                // If both match, use a blended color or show both
-                const bgColor = bgColors.length === 2 ?
-                    'linear-gradient(135deg, rgba(25, 118, 210, 0.2) 50%, rgba(56, 142, 60, 0.2) 50%)' :
-                    bgColors[0];
-                palaceTitleStyle += ` background: ${bgColor}; padding: 2px 6px; border-radius: 3px;`;
+            // 本命實體宮位自化標示
+            const baseStem = p.celestial;
+            const baseTransStars = chart.fourTransMap[baseStem];
+            const hasSelfTrans = baseTransStars ? baseTransStars.some(star => p.stars.includes(star)) : false;
+
+            if (hasSelfTrans) {
+                palaceTitleStyle += ` background: rgba(158, 158, 158, 0.2); padding: 2px 6px; border-radius: 3px;`;
             }
 
             html += `
