@@ -1241,7 +1241,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
                             const targetName = targetPalace ? targetPalace.title : '未知';
                             const sourceName = sourcePalace.title;
-                            const isZiHua = sourceName === targetName;
+                            // 自化判定：必須比較實際地支座標，不能只比宮名
+                            const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                             // Get Interpretation Text from JSON
                             let interpretation = '';
@@ -1324,7 +1325,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const color = transColors[type] || '#333';
 
                                     const sourceName = sourcePalace.title;
-                                    const isZiHua = sourceName === targetTitle;
+                                    // 自化判定：必須比較實際地支座標，不能只比宮名
+                                    const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                                     let interpretation = '';
                                     let displayTitle = '';
@@ -1437,8 +1439,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Target is always the Original Palace Title (User Request)
                             const targetTitle = targetPalaceObj.title;
 
-                            // Conceptual Zi Hua: Source Title (Role) == Target Title (Sector).
-                            const isZiHua = (layerTitle === targetTitle);
+                            // 自化判定：必須比較實際地支座標（起飛宮 currentBranch vs 目標星所在宮 targetPalaceObj.name）
+                            // 不能只比宮名（layerTitle vs targetTitle），否則大運/流年同名不同位時會誤判
+                            const isZiHua = (currentBranch === targetPalaceObj.name);
 
                             if (isZiHua) {
                                 displayTitle = `${displayLayerTitle} <strong style="color:${color}">自化${type}</strong>`;
@@ -1618,7 +1621,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
                         const targetName = targetPalace ? targetPalace.title : '未知';
                         const sourceName = sourcePalace.title;
-                        const isZiHua = sourceName === targetName;
+                        // 自化判定：必須比較實際地支座標，不能只比宮名
+                        const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
                         let interpretation = '';
                         let displayTitle = '';
                         if (isZiHua) {
@@ -1663,7 +1667,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (starIdx !== -1) {
                                 const type = chart.transTypes[starIdx];
                                 const sourceName = sourcePalace.title;
-                                const isZiHua = sourceName === targetTitle;
+                                // 自化判定：必須比較實際地支座標，不能只比宮名
+                                const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                                 let interpretation = '';
                                 let displayTitle = '';
@@ -1721,7 +1726,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         let interpretation = '';
                         if (targetPalaceObj) {
                             const targetTitle = targetPalaceObj.title;
-                            const isZiHua = (layerTitle === targetTitle);
+                            // 自化判定：必須比較實際地支座標（起飛宮 currentBranch vs 目標星所在宮 targetPalaceObj.name）
+                            // 不能只比宮名，否則大運/流年宮名同名但地支不同時會誤判
+                            const isZiHua = (currentBranch === targetPalaceObj.name);
                             if (isZiHua) {
                                 displayTitle = displayLayerTitle + ' 自化' + type;
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
