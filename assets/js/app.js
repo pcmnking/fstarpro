@@ -936,15 +936,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Determine palace title background color
             let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor:pointer; font-size: 1.1em;';
 
-            // 本命實體宮位自化標示
-            const baseStem = p.celestial;
-            const baseTransStars = chart.fourTransMap[baseStem];
-            const hasSelfTrans = baseTransStars ? baseTransStars.some(star => p.stars.includes(star)) : false;
-
-            if (hasSelfTrans) {
-                palaceTitleStyle += ` background: rgba(158, 158, 158, 0.2); padding: 2px 6px; border-radius: 3px;`;
-            }
-
             html += `
                 <div class="${classes.join(' ')}" data-branch="${b}">
                     <div class="palace-title" style="${palaceTitleStyle}">${p.title}</div>
