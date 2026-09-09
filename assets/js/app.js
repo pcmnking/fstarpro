@@ -746,9 +746,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Find which palace this star is in
                         const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
                         if (targetPalaceObj) {
-                            const targetPalaceName = targetPalaceObj.title;
-                            // If source and target palace names match
-                            if (sourcePalaceName === targetPalaceName) {
+                            // 自化亮燈判定：必須比較實際地支座標，不能只比宮名
+                            // currentBranch 是起飛宮地支，targetPalaceObj.name 是目標星所在宮地支
+                            if (currentBranch === targetPalaceObj.name) {
                                 matches.dayun.add(sourcePalaceName);
                             }
                         }
@@ -777,9 +777,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Find which palace this star is in
                         const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
                         if (targetPalaceObj) {
-                            const targetPalaceName = targetPalaceObj.title;
-                            // If source and target palace names match
-                            if (sourcePalaceName === targetPalaceName) {
+                            // 自化亮燈判定：必須比較實際地支座標，不能只比宮名
+                            // currentBranch 是起飛宮地支，targetPalaceObj.name 是目標星所在宮地支
+                            if (currentBranch === targetPalaceObj.name) {
                                 matches.liunian.add(sourcePalaceName);
                             }
                         }
